@@ -1,0 +1,155 @@
+.navbar {
+    width: 100%;
+    height: fit-content;
+    background-color: #d9d9d9;
+
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+
+    position: sticky;
+    top: 0px;
+
+    z-index: 99;
+}
+
+.navbar .left, 
+.navbar .right {
+    display: flex;
+    align-items: center;
+    max-height: 50px;
+    margin: 5px 20px;
+}
+
+.navbar .left .icon,
+.navbar .right .icon {
+    object-fit: contain;
+    border-radius: 50%;
+    max-height: inherit;
+    transition: transform 0.2s ease-in-out;
+}
+
+.navbar .left p {
+    font-size: 30px;
+    font-weight: 400;
+}
+
+.navbar .center {
+    display: flex;
+    flex-direction: row;
+    gap: 25px;
+}
+
+.navbar .right {
+    gap: 15px;
+    max-height: 45px;
+}
+
+.navbar .right .sign {
+    display: flex;
+    flex-direction: row;
+    gap: 10px;
+    align-items: center;
+    justify-content: center;
+}
+
+.navbar .right .sign .vr {
+    height: 30px;
+    border: 1px solid black;
+}
+
+.navbar .right .icon:hover {
+    transform: scale(1.1);
+}
+
+.navbar a {
+    text-decoration: none; 
+    color: inherit;
+}
+
+/* Hover effect for SIGN UP and LOG IN links */
+.navbar .right .sign h3 {
+    position: relative;
+    transition: all 0.3s ease;
+}
+
+.navbar .right .sign h3:hover {
+    transform: translateY(-2px);
+    color: #3dafff;
+}
+
+/* Underline animation effect */
+.navbar .right .sign h3 a::after {
+    content: '';
+    position: absolute;
+    width: 0;
+    height: 2px;
+    bottom: -2px;
+    left: 0;
+    background-color: #3dafff;
+    transition: width 0.3s ease;
+}
+
+.navbar .right .sign h3:hover a::after {
+    width: 100%;
+}
+
+h4 {
+    margin: 0px;
+}
+
+/* Hover effect for SIGN UP and LOG IN links */
+.navbar .center h4 {
+    position: relative;
+    transition: all 0.3s ease;
+}
+
+.navbar .center h4:hover {
+    transform: translateY(-2px);
+    color: #3dafff;
+}
+
+/* Underline animation effect */
+.navbar .center h4 a::after {
+    content: '';
+    position: absolute;
+    width: 0;
+    height: 2px;
+    bottom: -2px;
+    left: 0;
+    background-color: #3dafff;
+    transition: width 0.3s ease;
+}
+
+.navbar .center h4:hover a::after {
+    width: 100%;
+}
+
+/* Add responsive styles for the center navbar section */
+@media screen and (max-width: 768px) {
+    .navbar {
+        flex-wrap: wrap;
+    }
+    
+    .navbar .center {
+        order: 3;
+        width: 100%;
+        justify-content: center;
+        gap: 15px;
+    }
+    
+    .navbar .left, 
+    .navbar .right {
+        margin: 5px 10px;
+    }
+}
+
+@media screen and (max-width: 480px) {
+    .navbar .center {
+        gap: 10px;
+    }
+    
+    .navbar .center h4 {
+        font-size: 14px;
+    }
+}

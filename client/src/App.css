@@ -1,0 +1,20 @@
+
+
+body {
+  padding: 0px;
+  margin: 0px;
+}
+
+.f {
+  color: #273f5c;
+}
+
+.w {
+  color: #1682e7;
+}
+
+.f, .w {
+  font-family: "Bebas Neue", serif;
+  font-weight: 400;
+  font-style: normal;
+}

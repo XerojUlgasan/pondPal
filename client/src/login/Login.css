@@ -1,0 +1,168 @@
+.login {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: calc(100vh - 60px);
+    padding: 15px;
+    box-sizing: border-box;
+    overflow-y: auto; /* Allow scrolling if needed */
+}
+
+.login form {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    
+    width: 500px;
+    max-width: 90%;
+    height: auto;
+    max-height: calc(100vh - 90px); /* Ensure form fits within view */
+    min-height: min(450px, calc(100vh - 100px)); /* Dynamic minimum height */
+    padding: 30px 20px;
+    background-color: #efeeec;
+    border-radius: 30px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    overflow-y: auto; /* Allow scrolling if content overflows */
+}
+
+.login form .logo {
+    object-fit: contain;
+    max-height: inherit;
+    width: 128px;
+    margin-bottom: 15px;
+}
+
+.login form .ewan {
+    font-family: "Bebas Neue", serif;
+    font-weight: 400;
+    font-style: normal;
+    font-size: 25px;
+    margin-bottom: 15px;
+}
+
+.login form input, .login form .submit {
+    background-color: white;
+    border-style: none;
+    height: 45px;
+    width: 80%;
+    max-width: 350px;
+    border-radius: 10px;
+    font-family: "Bebas Neue", serif;
+    font-size: 20px;
+    text-align: center;
+    margin-top: 10px;
+    padding: 0 15px;
+    box-sizing: border-box;
+}
+
+.login form .submit {
+    background-color: #2d9cfd;
+    color: white;
+    width: 60%;
+    max-width: 250px;
+    margin-top: 30px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.login form .submit:hover {
+    background-color: #1a8aea;
+}
+
+.login form label {
+    text-align: center;
+    margin-top: 15px;
+    font-size: 14px;
+    padding: 0 15px;
+}
+
+.login a {
+    color: #2d9cfd;
+    text-decoration: none;
+    font-weight: bold;
+}
+
+.login a:hover {
+    text-decoration: underline;
+}
+
+/* Media queries for different screen sizes */
+@media screen and (max-width: 768px) {
+    .login form {
+        width: 90%;
+        min-height: min(400px, calc(100vh - 120px)); /* Responsive minimum height */
+        padding: 25px 15px;
+        margin: 10px 0;
+    }
+    
+    .login form .logo {
+        width: 100px;
+    }
+    
+    .login form .ewan {
+        font-size: 22px;
+        margin-bottom: 10px;
+    }
+
+    .login form input, .login form .submit {
+        margin-top: 8px;
+    }
+
+    .login form .submit {
+        margin-top: 20px;
+    }
+}
+
+@media screen and (max-height: 600px) {
+    .login form {
+        padding: 15px 10px;
+        min-height: auto;
+    }
+    
+    .login form .logo {
+        width: 80px;
+        margin-bottom: 10px;
+    }
+    
+    .login form .ewan {
+        font-size: 20px;
+        margin-bottom: 8px;
+    }
+    
+    .login form input, .login form .submit {
+        height: 38px;
+        margin-top: 6px;
+    }
+    
+    .login form .submit {
+        margin-top: 15px;
+    }
+    
+    .login form label {
+        margin-top: 10px;
+    }
+}
+
+@media screen and (max-width: 480px) {
+    .login form {
+        width: 95%;
+        border-radius: 20px;
+        padding: 20px 10px;
+    }
+    
+    .login form input, .login form .submit {
+        font-size: 16px;
+        height: 40px;
+        width: 90%;
+    }
+    
+    .login form .submit {
+        width: 70%;
+    }
+    
+    .login form label {
+        font-size: 13px;
+        line-height: 1.4;
+    }
+}

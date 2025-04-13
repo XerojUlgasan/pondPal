@@ -1,0 +1,209 @@
+/* Base styles that apply to all screen sizes */
+.register {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+}
+
+.register * {
+    font-family: "Bebas Neue", serif;
+    font-weight: 400;
+    font-style: normal;
+    box-sizing: border-box;
+}
+
+.register form {
+    height: auto;
+    min-height: calc(100vh - 60px);
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    padding: 20px 10px 80px 10px;
+    position: relative;
+}
+
+.info-cont .title {
+    font-size: 40px;
+    color: black;
+}
+
+.register form .info-cont {
+    background-color: #efeeec;
+    width: fit-content;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: center;
+    height: auto;
+    margin: 10px;
+    padding: 20px;
+    border-radius: 20px;
+}
+
+.register form .info-cont .cont {
+    display: flex;
+    flex-direction: column;
+    flex-wrap: wrap;
+    width: 100%;
+    height: 80%;
+    column-gap: 10px;
+    justify-content: baseline;
+}
+
+.register form .info-cont .input-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 50%;
+    margin-bottom: 15px;
+}
+
+.register form .acc-info .input-group {
+    width: 100%;
+}
+
+.register form .acc-info {
+    width: 30%;
+    height: 70%;
+}
+
+.register form .user-info {
+    width: 50%;
+    height: 70%;
+}
+
+.register form .submit-cont {
+    position: absolute;
+    bottom: 100px;
+    height: fit-content;
+    display: flex;
+    justify-content: center;
+    width: 80%;
+    justify-content: end;
+}
+
+.register form .submit-cont .submit-btn {
+    border-style: none;
+    height: 50px;
+    width: 150px;
+    background-color: #2e9cfd;
+    color: white;
+    font-size: 20px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border-radius: 5px;
+}
+
+.register form .submit-cont .submit-btn:hover {
+    background-color: #1281e8;
+    transform: scale(1.05);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.register form label {
+    margin-top: 15px;
+    font-size: 20px;
+    color: #1281e8;
+}
+
+.register form input {
+    text-align: center;
+    border-style: none;
+    height: 32px;
+    width: 100%;
+    max-width: 300px;
+    border-radius: 10px;
+    transition: all 0.3s ease;
+    margin-top: 5px;
+}
+
+.register form input:focus {
+    outline: none;
+    border: 2px solid #1281e8;
+    box-shadow: 0 0 5px rgba(18, 129, 232, 0.5);
+}
+
+/* Media Queries */
+/* For tablets and smaller desktop screens */
+@media screen and (max-width: 1024px) {
+    .register form .acc-info {
+        width: 35%;
+    }
+    
+    .register form .user-info {
+        width: 55%;
+    }
+    
+    .info-cont .title {
+        font-size: 36px;
+    }
+
+    .register form .submit-cont {
+        width: 90%;
+    }
+}
+
+/* For mobile devices */
+@media screen and (max-width: 768px) {
+    .register form {
+        flex-direction: column;
+        padding-bottom: 100px;
+    }
+    
+    .register form .acc-info,
+    .register form .user-info {
+        width: 90%;
+        margin: 10px 0;
+    }
+    
+    .register form .info-cont .cont {
+        max-height: none;
+        flex-wrap: nowrap;
+    }
+
+    .register form .info-cont .input-group{
+        width: 100%;
+    }
+    
+    .info-cont .title {
+        font-size: 32px;
+    }
+    
+    .register form label {
+        font-size: 18px;
+    }
+    
+    .register form .submit-cont {
+        justify-content: center;
+        position: static;
+    }
+}
+
+/* For very small screens */
+@media screen and (max-width: 480px) {
+    .register form .acc-info,
+    .register form .user-info {
+        width: 95%;
+        padding: 15px;
+    }
+
+    .register form .info-cont .input-group{
+        width: 100%;
+    }
+    
+    .info-cont .title {
+        font-size: 28px;
+    }
+    
+    .register form label {
+        font-size: 16px;
+    }
+    
+    .register form input {
+        max-width: 90%;
+    }
+}
+
+
