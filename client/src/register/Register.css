@@ -50,6 +50,7 @@
     height: 80%;
     column-gap: 10px;
     justify-content: baseline;
+    align-items: center;
 }
 
 .register form .info-cont .input-group {
@@ -205,5 +206,3 @@
         max-width: 90%;
     }
 }
-
-

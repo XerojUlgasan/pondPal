@@ -2,6 +2,10 @@ import React, { useState, useEffect } from 'react';
 import './UserHome.css';
 import userIcon from '../images/userIcon.png';
 import menuIcon from '../images/menuIcon.png';
+import addIcon from '../images/add.png';
+import analysisIcon from '../images/analysis.png';
+import devicesIcon from '../images/devices.png';
+import logoutIcon from '../images/logout.png'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 // Define getSensorConfig outside both components so it can be used by CustomTooltip
@@ -65,6 +69,8 @@ const UserHome = () => {
     const [chartData, setChartData] = useState([]);
     const [timePeriod, setTimePeriod] = useState('weekly');
     const [selectedDevice, setSelectedDevice] = useState('all');
+    const [deviceToManage, setDeviceToManage] = useState('');
+    const [devicesPopUp, setDevicesPopUp] = useState('');
 
     // Handler for sensor selection change
     const handleSensorChange = (e) => {
@@ -78,8 +84,31 @@ const UserHome = () => {
 
     // Handler for device change
     const handleDeviceChange = (e) => {
-        setSelectedDevice(e.target.value);
+        //currentTarget.dataset = target.value
+        //This is for divs        This is for input or select  
+
+        if (e.currentTarget.dataset.value != undefined) { //for divs
+            setSelectedDevice(e.currentTarget.dataset.value);
+        }
+        else { //for selects and inputs
+            setSelectedDevice(e.target.value);
+        }
+
     };
+
+    const deviceAnalytics = (e) => {
+        handleDeviceChange(e);
+        setActiveItem('analysis');
+    }
+
+    const handleItemClick = (item) => {
+        setActiveItem(item);
+    };
+
+    const handleManageDevice = (e) => {
+        setDeviceToManage(e.currentTarget.dataset.value);
+        setDevicesPopUp('manage');
+    }
 
     // Sensor options for the dropdown
     const sensorOptions = [
@@ -115,7 +144,7 @@ const UserHome = () => {
         sensors.forEach(sensor => {
             const values = chartData.filter(item => item[sensor] !== undefined)
                                     .map(item => item[sensor]);
-            
+
             if (values.length > 0) {
                 const sum = values.reduce((a, b) => a + b, 0);
                 averages[sensor] = sum / values.length;
@@ -163,9 +192,9 @@ const UserHome = () => {
             let entry = { date: formattedDate };
             
             // Add slight variance based on device selection
-            const deviceVariance = selectedDevice === 'all' ? 0 : 
-                                    selectedDevice === 'device1' ? -0.5 : 
-                                    selectedDevice === 'device2' ? 0 : 0.5;
+            const deviceVariance = selectedDevice === 'device1' ? 0 : 
+                                    selectedDevice === 'device2' ? -0.5 : 
+                                    selectedDevice === 'device3' ? 0 : 0.5;
             
             if (selectedSensor === 'all' || selectedSensor === 'ph') {
                 entry.ph = 6 + Math.random() * 2 + deviceVariance; // pH between 6-8
@@ -194,10 +223,6 @@ const UserHome = () => {
         setChartData(generateData());
     }, [selectedSensor, timePeriod, selectedDevice]);
 
-    const handleItemClick = (item) => {
-        setActiveItem(item);
-    };
-
     const averages = calculateAverages();
 
     return (
@@ -209,28 +234,21 @@ const UserHome = () => {
                     className={`device items ${activeItem === 'device' ? 'active' : ''}`}
                     onClick={() => handleItemClick('device')}
                 >
-                    <img className='icon' src={menuIcon} alt="Device"/>
+                    <img className='icon' src={devicesIcon} alt="Device"/>
                     <h3>View Device</h3>
                 </div>
                 <div 
                     className={`analysis items ${activeItem === 'analysis' ? 'active' : ''}`}
                     onClick={() => handleItemClick('analysis')}
                 >
-                    <img className='icon' src={menuIcon} alt="Analysis"/>
+                    <img className='icon' src={analysisIcon} alt="Analysis"/>
                     <h3>View Analysis</h3>
-                </div>
-                <div 
-                    className={`add items ${activeItem === 'add' ? 'active' : ''}`}
-                    onClick={() => handleItemClick('add')}
-                >
-                    <img className='icon' src={menuIcon} alt="Add Device"/>
-                    <h3>Add Device</h3>
                 </div>
                 <div 
                     className={`log-out items ${activeItem === 'logout' ? 'active' : ''}`}
                     onClick={() => handleItemClick('logout')}
                 >
-                    <img className='icon' src={userIcon} alt="Log Out"/>
+                    <img className='icon' src={logoutIcon} alt="Log Out"/>
                     <h3>Log Out</h3>
                 </div>
             </div>
@@ -255,6 +273,7 @@ const UserHome = () => {
             {(activeItem === 'device') && (
                 <div className='devices-container'>
                     <h2 className='devices-title'>Your Devices</h2>
+                    {/* devices */}
                     <div className='devices'>
                         {/* Device 1 */}
                         <div className='device-card'>
@@ -266,8 +285,8 @@ const UserHome = () => {
                                         Online
                                     </span>
                                 </div>
-                                <div className='device-icon'>
-                                    <img src={menuIcon} alt="Device icon"/>
+                                <div className='device-icon' data-value='device1' onClick={deviceAnalytics}>
+                                    <img src={analysisIcon} alt="Device icon"/>
                                 </div>
                             </div>
                             
@@ -295,7 +314,9 @@ const UserHome = () => {
                             </div>
                             
                             <div className='device-actions'>
-                                <button className='action-btn manage-btn'>
+                                <button className='action-btn manage-btn' 
+                                        data-value='device1' 
+                                        onClick={(e) => handleManageDevice(e)}>
                                     Manage
                                 </button>
                                 <button className='action-btn delete-btn'>
@@ -314,8 +335,8 @@ const UserHome = () => {
                                         Offline
                                     </span>
                                 </div>
-                                <div className='device-icon'>
-                                    <img src={menuIcon} alt="Device icon"/>
+                                <div className='device-icon' data-value='device2' onClick={deviceAnalytics}>
+                                    <img src={analysisIcon} alt="Device icon"/>
                                 </div>
                             </div>
                             
@@ -343,7 +364,9 @@ const UserHome = () => {
                             </div>
                             
                             <div className='device-actions'>
-                                <button className='action-btn manage-btn'>
+                                <button className='action-btn manage-btn' 
+                                        data-value='device2' 
+                                        onClick={(e) => handleManageDevice(e)}>
                                     Manage
                                 </button>
                                 <button className='action-btn delete-btn'>
@@ -362,8 +385,8 @@ const UserHome = () => {
                                         Warning
                                     </span>
                                 </div>
-                                <div className='device-icon'>
-                                    <img src={menuIcon} alt="Device icon"/>
+                                <div className='device-icon' data-value='device3' onClick={deviceAnalytics}>
+                                    <img src={analysisIcon} alt="Device icon"/>
                                 </div>
                             </div>
                             
@@ -391,7 +414,9 @@ const UserHome = () => {
                             </div>
                             
                             <div className='device-actions'>
-                                <button className='action-btn manage-btn'>
+                                <button className='action-btn manage-btn' 
+                                        data-value='device3' 
+                                        onClick={(e) => handleManageDevice(e)}>
                                     Manage
                                 </button>
                                 <button className='action-btn delete-btn'>
@@ -400,10 +425,175 @@ const UserHome = () => {
                             </div>
                         </div>
                     </div>
+
+                    {/* add-device*/}
+                    <div className='add-cont'>
+                        <button className='add-device' onClick={() => setDevicesPopUp('add-device')}>
+                            <img src={addIcon} alt="Add Device"/>
+                            <h1>Add Device</h1>
+                        </button>
+                    </div>
+
+                    {/* manage */}
+                    {(devicesPopUp === 'manage') && ( //refer to deviceToManage for the chosen device name
+                        <div className="popup-overlay">
+                            <div className="threshold-popup">
+                                <div className="popup-header">
+                                    <h2>Manage Device Thresholds</h2>
+                                    <button className="close-btn" onClick={() => setDevicesPopUp('')}>×</button>
+                                </div>
+                                
+                                <div className="device-name-display">
+                                    <span className="device-name">{devices.find(dev => dev.id === deviceToManage)?.name || 'Device'}</span>
+                                    <span className={`device-status ${deviceToManage.includes('1') ? 'online' : deviceToManage.includes('3') ? 'warning' : 'offline'}`}>
+                                        <span className="status-dot"></span>
+                                        {deviceToManage.includes('1') ? 'Online' : deviceToManage.includes('3') ? 'Warning' : 'Offline'}
+                                    </span>
+                                </div>
+                                
+                                <div className="threshold-form">
+                                    <div className="threshold-group">
+                                        <h3>pH Level</h3>
+                                        <div className="threshold-inputs">
+                                            <div className="input-group">
+                                                <label>Minimum</label>
+                                                <input type="number" step="0.1" defaultValue="6.5" />
+                                            </div>
+                                            <div className="input-group">
+                                                <label>Maximum</label>
+                                                <input type="number" step="0.1" defaultValue="8.0" />
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="threshold-group">
+                                        <h3>Temperature</h3>
+                                        <div className="threshold-inputs">
+                                            <div className="input-group">
+                                                <label>Minimum</label>
+                                                <input type="number" step="0.1" defaultValue="20.0" />
+                                                <span className="unit">°C</span>
+                                            </div>
+                                            <div className="input-group">
+                                                <label>Maximum</label>
+                                                <input type="number" step="0.1" defaultValue="28.0" />
+                                                <span className="unit">°C</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="threshold-group">
+                                        <h3>TDS</h3>
+                                        <div className="threshold-inputs">
+                                            <div className="input-group">
+                                                <label>Minimum</label>
+                                                <input type="number" defaultValue="150" />
+                                                <span className="unit">ppm</span>
+                                            </div>
+                                            <div className="input-group">
+                                                <label>Maximum</label>
+                                                <input type="number" defaultValue="250" />
+                                                <span className="unit">ppm</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="threshold-group">
+                                        <h3>Turbidity</h3>
+                                        <div className="threshold-inputs">
+                                            <div className="input-group">
+                                                <label>Minimum</label>
+                                                <input type="number" step="0.1" defaultValue="0" />
+                                                <span className="unit">NTU</span>
+                                            </div>
+                                            <div className="input-group">
+                                                <label>Maximum</label>
+                                                <input type="number" step="0.1" defaultValue="20.0" />
+                                                <span className="unit">NTU</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="threshold-group">
+                                        <h3>Water Level</h3>
+                                        <div className="threshold-inputs">
+                                            <div className="input-group">
+                                                <label>Minimum</label>
+                                                <input type="number" defaultValue="70" />
+                                                <span className="unit">%</span>
+                                            </div>
+                                            <div className="input-group">
+                                                <label>Maximum</label>
+                                                <input type="number" defaultValue="100" />
+                                                <span className="unit">%</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div className="popup-actions">
+                                    <button className="action-btn delete-btn" onClick={() => setDevicesPopUp('')}>Cancel</button>
+                                    <button className="action-btn manage-btn" onClick={() => {
+                                        // Here you would save the threshold values
+                                        setDevicesPopUp('');
+                                    }}>Save Thresholds</button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* add-device */}
+                    {(devicesPopUp === 'add-device') && (
+                        <div className="popup-overlay">
+                            <div className="threshold-popup">
+                                <div className="popup-header">
+                                    <h2>Add New Device</h2>
+                                    <button className="close-btn" onClick={() => setDevicesPopUp('')}>×</button>
+                                </div>
+                                
+                                <div className="add-device-form">
+                                    <div className="form-group">
+                                        <label htmlFor="deviceId">Device ID</label>
+                                        <input 
+                                            type="text" 
+                                            id="deviceId" 
+                                            placeholder="Enter device ID (e.g., PP-001)" 
+                                            className="form-input"
+                                        />
+                                    </div>
+                                    
+                                    <div className="form-group">
+                                        <label htmlFor="deviceName">Device Name</label>
+                                        <input 
+                                            type="text" 
+                                            id="deviceName" 
+                                            placeholder="Enter a name for your device" 
+                                            className="form-input"
+                                        />
+                                    </div>
+                                </div>
+                                
+                                <div className="popup-actions">
+                                    <button className="action-btn delete-btn" onClick={() => setDevicesPopUp('')}>
+                                        Cancel
+                                    </button>
+                                    <button className="action-btn manage-btn" onClick={() => {
+                                        // Here you would save the new device
+                                        // For now we'll just close the popup
+                                        setDevicesPopUp('');
+                                        // Display a success message
+                                        alert('Device added successfully!');
+                                    }}>
+                                        Add Device
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
             )}
 
-            {/* View Analysis */}
+                        {/* View Analysis */}
             {(activeItem === 'analysis') && (
                 <div className='analysis-pnl'>
                     <div className='analysis-top'>
@@ -648,7 +838,7 @@ const UserHome = () => {
                         </div>
                     </div>                    
                 </div>
-            )}
+            )} 
         </div>
     )
 }
