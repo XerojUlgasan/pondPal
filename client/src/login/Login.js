@@ -5,7 +5,7 @@ import { Link } from 'react-router-dom';
 const Login = () => {
     return (
         <div className='login'>
-            <form>
+            <form action='/userhome'>
                 <img src={logoimg} className='logo'/>
                 <label className='ewan'>Login</label>
                 <input type='text' className='user' placeholder='Email'/>

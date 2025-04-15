@@ -17,14 +17,21 @@
 .compname {
     display: flex;
     flex-wrap: wrap;
+    flex-direction: column;
     width: 60%;
     position: relative;
     top: 30%;
     left: 10%;
 }
 
-.left .compname .f, .left .compname .w {
+.compname .lamao {
+    display: flex;
+    flex-direction: row;
+}
+
+.left .compname .lamao .f, .left .compname .lamao .w {
     font-size: 100px;
+    display: block;
 }
 
 .left .compname h3 {

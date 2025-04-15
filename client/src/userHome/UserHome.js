@@ -593,10 +593,12 @@ const UserHome = () => {
                 </div>
             )}
 
-                        {/* View Analysis */}
+            {/* View Analysis */}
             {(activeItem === 'analysis') && (
                 <div className='analysis-pnl'>
                     <div className='analysis-top'>
+
+                        {/* graph */}
                         <div className='analysis-left'>
                             <div className='filters'>
                                 <div className="sensor-dropdown">
@@ -716,6 +718,8 @@ const UserHome = () => {
                                 </ResponsiveContainer>
                             </div>
                         </div>
+
+                        {/* Average */}
                         <div className='analysis-right'>
                             <div className='filters-container'>
                                 <div className="filter-group">
@@ -765,7 +769,10 @@ const UserHome = () => {
                                 </div>
                             </div>
                         </div>
+                        
                     </div>
+
+                    {/* notification */}
                     <div className='analysis-bottom'>
                         <div className='notification-container'>
                             <div className='notification-header'>

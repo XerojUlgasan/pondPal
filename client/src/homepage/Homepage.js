@@ -6,8 +6,10 @@ const Homepage = () => {
         <div className="homepage">
             <div className="left">
                 <div className="compname">
-                        <h1 className="f">POND</h1>
-                        <h1 className="w">PAL</h1>
+                        <div className="lamao">
+                            <h1 className="f">POND</h1>
+                            <h1 className="w">PAL</h1>
+                        </div>
                         <h3>Water health monitoring for fish farm</h3>
                 </div>
             </div>
