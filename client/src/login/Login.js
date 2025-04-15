@@ -1,8 +1,36 @@
 import './Login.css'
 import logoimg from '../images/logo.png'
 import { Link } from 'react-router-dom';
+import database from '../firebaseConfig.js'
+import { onChildAdded, onValue, ref } from 'firebase/database';
+import { useEffect, useState } from 'react';
 
 const Login = () => {
+
+    const [deviceData, setDeviceData] = useState(null);
+
+    useEffect(() => {
+        console.log("Setting up Firebase listener for /devices");
+        const dbRef = ref(database, '/Devices');
+        
+        const unsubscribe = onValue(dbRef, 
+            (snapshot) => {
+                const data = snapshot.val();
+                console.log("Data changed:", data);
+                setDeviceData(data);
+            }, 
+            (error) => {
+                console.error("Firebase error:", error);
+            }
+        );
+        
+        // Cleanup function
+        return () => {
+            console.log("Removing Firebase listener");
+            unsubscribe();
+        };
+    }, []);
+
     return (
         <div className='login'>
             <form action='/userhome'>

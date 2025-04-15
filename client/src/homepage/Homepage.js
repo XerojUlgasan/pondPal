@@ -1,7 +1,10 @@
-import { Link } from "react-router-dom"
+
 import "./Homepage.css"
+import database from "../firebaseConfig.js"
+import { set, ref, serverTimestamp } from "firebase/database"
 
 const Homepage = () => {
+
     return (
         <div className="homepage">
             <div className="left">

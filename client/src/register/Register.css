@@ -20,7 +20,7 @@
     justify-content: center;
     align-items: center;
     width: 100%;
-    padding: 20px 10px 80px 10px;
+    padding: 20px 10px 20px 10px;
     position: relative;
 }
 
@@ -67,7 +67,7 @@
 
 .register form .acc-info {
     width: 30%;
-    height: 70%;
+    height: auto;
 }
 
 .register form .user-info {
@@ -77,7 +77,7 @@
 
 .register form .submit-cont {
     position: absolute;
-    bottom: 100px;
+    bottom: 50px;
     height: fit-content;
     display: flex;
     justify-content: center;
@@ -125,6 +125,96 @@
     border: 2px solid #1281e8;
     box-shadow: 0 0 5px rgba(18, 129, 232, 0.5);
 }
+
+/* Add to your Register.css */
+.password-field {
+    position: relative;
+    width: 100%;
+    box-sizing: border-box;
+    display: flex;
+    justify-content: center;
+}
+
+.password-tooltip {
+    position: absolute;
+    top: 40px;
+    width: 240px;
+    background-color: #f9f9f9;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    padding: 10px;
+    display: none;
+    z-index: 100;
+}
+
+.password-tooltip.show {
+    display: block;
+}
+
+.tooltip-content h4 {
+    margin-top: 0;
+    margin-bottom: 8px;
+    font-size: 14px;
+    color: #333;
+}
+
+.tooltip-content ul {
+    list-style-type: none;
+    padding-left: 0;
+    margin: 0;
+}
+
+.tooltip-content li {
+    margin-bottom: 4px;
+    font-size: 12px;
+    line-height: 1.4;
+}
+
+.tooltip-content .valid {
+    color: #2e7d32;
+}
+
+.tooltip-content .invalid {
+    color: #757575;
+}
+
+/* Add this to your Register.css file */
+
+.password-input-container {
+    position: relative;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    box-sizing: border-box;
+}
+
+.password-input-container .inputs {
+    box-sizing: border-box;
+    width: 100%;
+}
+
+.toggle-password {
+    position: absolute;
+    right: 5%;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 16px;
+    color: #666;
+    z-index: 10;
+}
+
+.toggle-password:hover {
+    color: #333;
+}
+
+.toggle-password:focus {
+    outline: none;
+}
+
 
 /* Media Queries */
 /* For tablets and smaller desktop screens */
