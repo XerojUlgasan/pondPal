@@ -1,7 +1,7 @@
 import './Register.css'
 import database from '../firebaseConfig.js'
 import { useState, useEffect, useRef } from 'react'
-import { child, equalTo, get, orderByChild, query, ref, set } from 'firebase/database';
+import { child, equalTo, get, orderByChild, push, query, ref, set } from 'firebase/database';
 import { useNavigate } from "react-router-dom";
 // Import the eye icons from a popular icon library like FontAwesome or Feather Icons
 // If you don't want to use an icon library, we'll use text instead
@@ -43,11 +43,6 @@ const Register = () => {
             match: password === confirmPassword && password !== ''
         });
     };
-    
-    // Check password validity whenever password or confirmPassword changes
-    useEffect(() => {
-        validatePassword(credentials.password, credentials.confirmPassword);
-    }, [credentials.password, credentials.confirmPassword]);
 
     // Handle input changes
     const handleChange = (e) => {
@@ -64,7 +59,7 @@ const Register = () => {
     };
 
     const isEmailExist = async (email) => {
-        const dataRef = ref(database, '/user/')
+        const dataRef = ref(database, '/user')
         const emailQuery = query(dataRef, orderByChild('email'), equalTo(email))
 
         try {
@@ -79,9 +74,12 @@ const Register = () => {
     const isUsernameExist = async (username) => {
         const dataRef = ref(database, '/user')
         
-        const snapshot = await get(child(dataRef, username))
-        alert('here')
+        const usernameQuery = query(dataRef, 
+                                    orderByChild('username'), 
+                                    equalTo(username))
+
         try {
+            const snapshot = await get(usernameQuery)
             return snapshot.exists()
         } catch (error) {
             alert(error)
@@ -97,7 +95,7 @@ const Register = () => {
             return;
         }
 
-        if(await isEmailExist(credentials.email)){
+        if(await isEmailExist(credentials.email.toLocaleLowerCase())){
             alert('Email is already registered.')
             return;
         }
@@ -107,20 +105,30 @@ const Register = () => {
             return;
         }
         
-        set(ref(database, '/user/' + credentials.username), {
-            email: credentials.email,
+        push(ref(database, '/user'), {
+            username: credentials.username,
+            email: credentials.email.toLowerCase(),
             password: credentials.password,
-            lastName: credentials.lastName,
-            firstName: credentials.firstName,
-            middleName: credentials.middleName,
-            birthdate: credentials.birthdate,
-            cellphone: credentials.cellphone
+            lastName: credentials.lastName.toLowerCase(),
+            firstName: credentials.firstName.toLowerCase(),
+            middleName: credentials.middleName.toLowerCase(),
+            birthdate: credentials.birthdate.toLowerCase(),
+            cellphone: credentials.cellphone.toLowerCase()
         })
         .then(() => {
             alert('Account successfully registered. Proceed to login.')
             navigate("/login")
         })
     }
+
+    useEffect(() => {
+        validatePassword(credentials.password, credentials.confirmPassword);
+
+        if(localStorage.getItem("userInfo")) {
+            navigate('/userhome')
+        }
+
+    }, [credentials.password, credentials.confirmPassword]);
 
     // Add state to control tooltip visibility
     const [showTooltip, setShowTooltip] = useState(false);

@@ -7,6 +7,17 @@ import analysisIcon from '../images/analysis.png';
 import devicesIcon from '../images/devices.png';
 import logoutIcon from '../images/logout.png'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { data, useNavigate } from 'react-router-dom';
+import database from '../firebaseConfig';
+import { get, push, ref, update } from 'firebase/database';
+
+//userInfo:
+//
+//email
+//firstname
+//lastname
+//userId
+//username
 
 // Define getSensorConfig outside both components so it can be used by CustomTooltip
 const getSensorConfig = (type) => {
@@ -71,6 +82,13 @@ const UserHome = () => {
     const [selectedDevice, setSelectedDevice] = useState('all');
     const [deviceToManage, setDeviceToManage] = useState('');
     const [devicesPopUp, setDevicesPopUp] = useState('');
+    const [logged, setLogged] = useState('true');
+    const [userInfo, setUserInfo] = useState();
+    const [deviceInfo, setDeviceInfo] = useState({
+        deviceId: '',
+        deviceName: ''
+    })
+    const navigate = useNavigate();
 
     // Handler for sensor selection change
     const handleSensorChange = (e) => {
@@ -103,11 +121,70 @@ const UserHome = () => {
 
     const handleItemClick = (item) => {
         setActiveItem(item);
+
+        if(item === 'logout') {
+            localStorage.clear()
+            setLogged(false)
+            navigate('/')
+        }
     };
 
     const handleManageDevice = (e) => {
         setDeviceToManage(e.currentTarget.dataset.value);
         setDevicesPopUp('manage');
+    }
+
+    const handleAddDevice = (e) => {
+        const {name, value} = e.target
+
+        setDeviceInfo((prev) => ({
+            ...prev,
+            [name]: value
+        }))
+    }
+
+    const insertDeviceToDb = async () => {
+        if(deviceInfo.deviceId === '' && deviceInfo.deviceName === ''){
+            alert('Please fill out all the fields.')
+            return
+        }
+
+        if(userInfo == null){
+            alert('Something wrong with the user.')
+            return
+        }
+
+        try{
+            //DEVICCE CHECKING IF IT EXISTS
+            const deviceRef = ref(database, `/devices/${deviceInfo.deviceId}`)
+            const snapshot = await get(deviceRef)
+            
+            if(!snapshot.exists()){
+                alert('Device does not exist.')
+                return
+            }
+
+            //REGISTERING CURRENT USER TO THE DEVICE'S USERS
+            const deviceUserRef = ref(database, `/devices/${deviceInfo.deviceId}/users`)
+            const uniqueKey = await push(deviceUserRef, userInfo?.username)
+            console.log('User is registered to the device successfully!')
+
+            //ADDING DEVICE TO USER'S DEVICE
+            const userDevicesRef = ref(database, `/user/${userInfo?.userId}/devices`)
+            push(userDevicesRef, {
+                                    deviceId: deviceInfo.deviceId,
+                                    deviceName: deviceInfo.deviceName
+                                })
+            console.log('Device is registered to the user successfully!')
+
+            setDeviceInfo({
+                deviceId: '',
+                deviceName: ''
+            })
+
+        }catch(e){
+            alert(e);
+        }
     }
 
     // Sensor options for the dropdown
@@ -220,8 +297,17 @@ const UserHome = () => {
 
     // Update chart data when sensor selection changes
     useEffect(() => {
+        if(!localStorage.getItem("userInfo")) {
+            navigate('/')
+        }
+
+        if(userInfo == null){
+            setUserInfo(JSON.parse(localStorage.getItem('userInfo')))
+        }
+
         setChartData(generateData());
-    }, [selectedSensor, timePeriod, selectedDevice]);
+
+    }, [selectedSensor, timePeriod, selectedDevice, logged, userInfo]);
 
     const averages = calculateAverages();
 
@@ -258,13 +344,12 @@ const UserHome = () => {
                 <div className='content'>
                     <h1 className='title'>
                         Welcome, <br/>
-                        user
+                        {userInfo?.firstname ? (userInfo.firstname.charAt(0).toUpperCase() + userInfo.firstname.slice(1)) : ""} {userInfo?.lastname ? (userInfo.lastname.charAt(0).toUpperCase() + userInfo.lastname.slice(1)) : ""}
                     </h1>
 
                     <p>
-                    PondPal is your go-to solution for keeping your fish happy and your pond healthy. Our system continuously monitors essential water quality parameters such as pH level, temperature, dissolved oxygen, and turbidity to ensure a safe and thriving environment for your aquatic life.
-                    Using smart sensors and real-time data, PondPal alerts you whenever conditions go beyond the safe range – so you can act fast and avoid problems like fish stress, disease, or water pollution.
-                    Whether you're managing a small backyard pond or a large fish farm, PondPal helps you stay in control, anytime, anywhere.
+                    PondPal is your go-to solution for keeping your fish happy and your pond healthy. Our system continuously monitors essential water quality parameters such as pH level, temperature, TDS, turbidity, and water level to ensure a safe and thriving environment for your aquatic life.
+                    Using sensors and real-time data, PondPal alerts you whenever conditions go beyond the threshold so you can act fast and avoid problems like fish stress, disease, or water pollution.
                     </p>
                 </div>
             )}
@@ -428,13 +513,13 @@ const UserHome = () => {
 
                     {/* add-device*/}
                     <div className='add-cont'>
-                        <button className='add-device' onClick={() => setDevicesPopUp('add-device')}>
+                        <button className='add-device' onClick={() => {setDevicesPopUp('add-device')}}>
                             <img src={addIcon} alt="Add Device"/>
                             <h1>Add Device</h1>
                         </button>
                     </div>
 
-                    {/* manage */}
+                    {/* manage POP UP */}
                     {(devicesPopUp === 'manage') && ( //refer to deviceToManage for the chosen device name
                         <div className="popup-overlay">
                             <div className="threshold-popup">
@@ -542,7 +627,7 @@ const UserHome = () => {
                         </div>
                     )}
 
-                    {/* add-device */}
+                    {/* add-device POP UP*/}
                     {(devicesPopUp === 'add-device') && (
                         <div className="popup-overlay">
                             <div className="threshold-popup">
@@ -557,8 +642,12 @@ const UserHome = () => {
                                         <input 
                                             type="text" 
                                             id="deviceId" 
-                                            placeholder="Enter device ID (e.g., PP-001)" 
+                                            placeholder="Enter device ID" 
                                             className="form-input"
+                                            name='deviceId'
+                                            required
+                                            value={deviceInfo.deviceId}
+                                            onChange={handleAddDevice}
                                         />
                                     </div>
                                     
@@ -569,6 +658,10 @@ const UserHome = () => {
                                             id="deviceName" 
                                             placeholder="Enter a name for your device" 
                                             className="form-input"
+                                            name='deviceName'
+                                            required
+                                            value={deviceInfo.deviceName}
+                                            onChange={handleAddDevice}
                                         />
                                     </div>
                                 </div>
@@ -578,11 +671,8 @@ const UserHome = () => {
                                         Cancel
                                     </button>
                                     <button className="action-btn manage-btn" onClick={() => {
-                                        // Here you would save the new device
-                                        // For now we'll just close the popup
                                         setDevicesPopUp('');
-                                        // Display a success message
-                                        alert('Device added successfully!');
+                                        insertDeviceToDb();
                                     }}>
                                         Add Device
                                     </button>

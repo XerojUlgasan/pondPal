@@ -14,19 +14,13 @@ function App() {
         <Navbar />
 
         <Routes>
-          <Route exact path="/" element={<Homepage />} />
-        </Routes>
+          
+          <Route exact path="/" element={<Homepage />}/>
+          <Route path="/login" element={<Login/>} />
+          <Route path="/register" element={<Register/>} />
+          <Route path="/userhome" element={<UserHome/>} />
 
-        <Routes>
-          <Route exact path="/login" element={<Login/>} />
-        </Routes>
-
-        <Routes>
-          <Route exact path="/register" element={<Register/>} />
-        </Routes>
-
-        <Routes>
-          <Route exact path="/userHome" element={<UserHome/>} />
+          <Route path="*" element={<h1>Error 404 - PAGE NOT FOUND</h1>}/>
         </Routes>
 
       </BrowserRouter>

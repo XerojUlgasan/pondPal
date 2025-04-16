@@ -2,8 +2,19 @@
 import "./Homepage.css"
 import database from "../firebaseConfig.js"
 import { set, ref, serverTimestamp } from "firebase/database"
+import { useNavigate } from "react-router-dom"
+import { useEffect } from "react"
 
 const Homepage = () => {
+    const navigate = useNavigate()
+
+    console.log()
+
+    useEffect(() => {
+        if(localStorage.getItem('userInfo')){
+            navigate('/userhome')
+        }
+    }, [])
 
     return (
         <div className="homepage">
