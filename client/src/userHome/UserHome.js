@@ -9,7 +9,7 @@ import logoutIcon from '../images/logout.png'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { data, useNavigate } from 'react-router-dom';
 import database from '../firebaseConfig';
-import { get, push, ref, update } from 'firebase/database';
+import { get, onValue, push, ref, set, update } from 'firebase/database';
 
 //userInfo:
 //
@@ -82,8 +82,36 @@ const UserHome = () => {
     const [selectedDevice, setSelectedDevice] = useState('all');
     const [deviceToManage, setDeviceToManage] = useState('');
     const [devicesPopUp, setDevicesPopUp] = useState('');
-    const [logged, setLogged] = useState('true');
-    const [userInfo, setUserInfo] = useState();
+    const [refreshTime, setRefreshTime] = useState(Date.now());
+    const [device, setDevice] = useState({
+        deviceId: '',
+        deviceName: '',
+        isOnline: '',
+        isWarning: '',
+        lastUpdate: '',
+        sensors: {
+            ph: 0,
+            tds: 0,
+            temp: 0,
+            turb: 0,
+            watlvl: 0,
+        },
+        threshold: {
+            ph: {min: 0, max: 0},
+            tds: {min: 0, max: 0},
+            temp: {min: 0, max: 0},
+            turb: {min: 0, max: 0},
+            watlvl: {min: 0, max: 0}
+        }
+    })
+    const [userInfo, setUserInfo] = useState({
+        devices: [],
+        email: '',
+        firstname: '',
+        lastname: '',
+        userId: '',
+        username: ''
+    });
     const [deviceInfo, setDeviceInfo] = useState({
         deviceId: '',
         deviceName: ''
@@ -124,12 +152,15 @@ const UserHome = () => {
 
         if(item === 'logout') {
             localStorage.clear()
-            setLogged(false)
             navigate('/')
         }
     };
 
     const handleManageDevice = (e) => {
+        if(userInfo?.devices){
+            const index = userInfo.devices.findIndex(dev => dev.deviceId === e.currentTarget.dataset.value)
+            setDevice(userInfo.devices[index])
+        }
         setDeviceToManage(e.currentTarget.dataset.value);
         setDevicesPopUp('manage');
     }
@@ -151,6 +182,16 @@ const UserHome = () => {
 
         if(userInfo == null){
             alert('Something wrong with the user.')
+            return
+        }
+
+        if(userInfo.devices.findIndex(dev => dev.deviceId === deviceInfo.deviceId) !== -1){
+            alert('Device ID is already added to your devices')
+            return
+        }
+
+        if(userInfo.devices.findIndex(dev => dev.deviceName === deviceInfo.deviceName) !== -1){
+            alert('Device name is already used on within your devices')
             return
         }
 
@@ -177,6 +218,15 @@ const UserHome = () => {
                                 })
             console.log('Device is registered to the user successfully!')
 
+            console.log('Updating user info...')
+            setUserInfo(prev => ({
+                ...prev,
+                devices: [...prev.devices, {
+                                            deviceId: deviceInfo.deviceId,
+                                            deviceName: deviceInfo.deviceName
+                                            }]
+            }))
+
             setDeviceInfo({
                 deviceId: '',
                 deviceName: ''
@@ -184,6 +234,8 @@ const UserHome = () => {
 
         }catch(e){
             alert(e);
+        }finally{
+            console.log('Device added to userInfo')
         }
     }
 
@@ -295,25 +347,94 @@ const UserHome = () => {
         return data;
     };
 
-    // Update chart data when sensor selection changes
     useEffect(() => {
         if(!localStorage.getItem("userInfo")) {
             navigate('/')
         }
 
-        if(userInfo == null){
-            setUserInfo(JSON.parse(localStorage.getItem('userInfo')))
+        if(userInfo.userId === ''){
+            setUserInfo(prev => ({
+                ...prev,
+                ...JSON.parse(localStorage.getItem('userInfo'))
+            }))
+        }else {
+            localStorage.setItem('userInfo', JSON.stringify(userInfo))
         }
 
         setChartData(generateData());
+    }, [selectedSensor, timePeriod, selectedDevice]);
 
-    }, [selectedSensor, timePeriod, selectedDevice, logged, userInfo]);
+    useEffect(() => {
+        const unsubscribes = [];
+
+        if(userInfo.devices.length != 0){
+            userInfo.devices.forEach(device => {
+                const userDeviceRef = ref(database, `/devices/${device.deviceId}`)
+                
+                const unsubscribe = onValue(userDeviceRef, (snapshot) => {
+                    const deviceData = snapshot.val()
+
+                    setUserInfo(prev => {
+                        const deviceIndex = prev.devices.findIndex(d => 
+                        d.deviceId === device.deviceId
+                        );
+                        
+                        if(deviceIndex === -1) return prev;
+
+                        // Check if device is online (updated within last minute)
+                        const lastUpdateTime = new Date(deviceData.lastUpdate);
+                        const currentTime = new Date(Date.now());
+                        const timeDifference = currentTime - lastUpdateTime;
+                        const isOnline = timeDifference < 60000; // 60000ms = 1 minute
+
+                        // Create new devices array with updated device data
+                        const updatedDevices = [...prev.devices];
+
+                        updatedDevices[deviceIndex] = {
+                            ...updatedDevices[deviceIndex],
+                            ...deviceData,
+                            isOnline // Add isOnline property
+                        };
+                        
+                        return {
+                        ...prev,
+                        devices: updatedDevices
+                        };
+                    });
+                })
+                unsubscribes.push(unsubscribe);
+            })
+        }
+
+        if(userInfo.userId != ''){
+            localStorage.setItem('userInfo', JSON.stringify(userInfo))   
+        }
+
+        return () => {
+            unsubscribes.forEach(unsub => unsub());
+        };
+    }, [userInfo.devices.length, refreshTime])
+    
+    useEffect(() => {
+        const interval = setInterval(() => {
+        setRefreshTime(Date.now());
+
+        }, 60000); 
+        return () => clearInterval(interval);
+    }, []);
+
+    useEffect(()=> {
+        console.log(userInfo)
+    }, [userInfo])
+
+    useEffect(() => {
+        console.log(device)
+    }, [device])
 
     const averages = calculateAverages();
 
     return (
         <div className="userHome">
-
             {/* Sidebar */}
             <div className='sidebar'>
                 <div 
@@ -344,7 +465,7 @@ const UserHome = () => {
                 <div className='content'>
                     <h1 className='title'>
                         Welcome, <br/>
-                        {userInfo?.firstname ? (userInfo.firstname.charAt(0).toUpperCase() + userInfo.firstname.slice(1)) : ""} {userInfo?.lastname ? (userInfo.lastname.charAt(0).toUpperCase() + userInfo.lastname.slice(1)) : ""}
+                        {userInfo?.firstname ? (userInfo.firstname.charAt(0).toUpperCase() + userInfo.firstname.slice(1)) : ""}
                     </h1>
 
                     <p>
@@ -360,155 +481,60 @@ const UserHome = () => {
                     <h2 className='devices-title'>Your Devices</h2>
                     {/* devices */}
                     <div className='devices'>
-                        {/* Device 1 */}
-                        <div className='device-card'>
-                            <div className='device-header'>
-                                <div className='device-name-section'>
-                                    <h3>Pond 1</h3>
-                                    <span className='device-status online'>
-                                        <span className='status-dot'></span>
-                                        Online
-                                    </span>
+
+                        {userInfo && userInfo?.devices && userInfo.devices.map(device => {
+
+                            return (
+                                <div className='device-card' key={device.deviceId}>
+                                    <div className='device-header'>
+                                        <div className='device-name-section'>
+                                            <h3>{device.deviceName}</h3>
+                                            <span className={`device-status ${device?.isOnline ? (device?.isWarning ? 'warning' : 'online') : 'offline'}`}>
+                                                <span className='status-dot'></span>
+                                                {device?.isOnline ? (device?.isWarning ? 'Warning' : 'Online') : 'Offline'}
+                                            </span>
+                                        </div>
+                                        <div className='device-icon' data-value='device3' onClick={deviceAnalytics}>
+                                            <img src={analysisIcon} alt="Device icon"/>
+                                        </div>
+                                    </div>
+                                    
+                                    <div className='device-stats'>
+                                        <div className='stat-item'>
+                                            <span className='stat-label'>pH</span>
+                                            <span className='stat-value'>{device.sensors?.ph}</span>
+                                        </div>
+                                        <div className='stat-item'>
+                                            <span className='stat-label'>Temp</span>
+                                            <span className='stat-value'>{device.sensors?.temp}°C</span>
+                                        </div>
+                                        <div className='stat-item'>
+                                            <span className='stat-label'>TDS</span>
+                                            <span className='stat-value'>{device.sensors?.tds}</span>
+                                        </div>
+                                        <div className='stat-item'>
+                                            <span className='stat-label'>Turbidity</span>
+                                            <span className='stat-value'>{device.sensors?.turb}</span>
+                                        </div>
+                                        <div className='stat-item'>
+                                            <span className='stat-label'>Water Level</span>
+                                            <span className='stat-value'>{device.sensors?.watlvl}%</span>
+                                        </div>
+                                    </div>
+                                    
+                                    <div className='device-actions'>
+                                        <button className='action-btn manage-btn' 
+                                                data-value={device.deviceId}
+                                                onClick={(e) => handleManageDevice(e)}>
+                                            Manage
+                                        </button>
+                                        <button className='action-btn delete-btn'>
+                                            Delete
+                                        </button>
+                                    </div>
                                 </div>
-                                <div className='device-icon' data-value='device1' onClick={deviceAnalytics}>
-                                    <img src={analysisIcon} alt="Device icon"/>
-                                </div>
-                            </div>
-                            
-                            <div className='device-stats'>
-                                <div className='stat-item'>
-                                    <span className='stat-label'>pH</span>
-                                    <span className='stat-value'>7.2</span>
-                                </div>
-                                <div className='stat-item'>
-                                    <span className='stat-label'>Temp</span>
-                                    <span className='stat-value'>24°C</span>
-                                </div>
-                                <div className='stat-item'>
-                                    <span className='stat-label'>TDS</span>
-                                    <span className='stat-value'>180</span>
-                                </div>
-                                <div className='stat-item'>
-                                    <span className='stat-label'>Turbidity</span>
-                                    <span className='stat-value'>90</span>
-                                </div>
-                                <div className='stat-item'>
-                                    <span className='stat-label'>Water Level</span>
-                                    <span className='stat-value'>90%</span>
-                                </div>
-                            </div>
-                            
-                            <div className='device-actions'>
-                                <button className='action-btn manage-btn' 
-                                        data-value='device1' 
-                                        onClick={(e) => handleManageDevice(e)}>
-                                    Manage
-                                </button>
-                                <button className='action-btn delete-btn'>
-                                    Delete
-                                </button>
-                            </div>
-                        </div>
-                        
-                        {/* Device 2 */}
-                        <div className='device-card'>
-                            <div className='device-header'>
-                                <div className='device-name-section'>
-                                    <h3>Aquarium 2</h3>
-                                    <span className='device-status offline'>
-                                        <span className='status-dot'></span>
-                                        Offline
-                                    </span>
-                                </div>
-                                <div className='device-icon' data-value='device2' onClick={deviceAnalytics}>
-                                    <img src={analysisIcon} alt="Device icon"/>
-                                </div>
-                            </div>
-                            
-                            <div className='device-stats'>
-                                <div className='stat-item'>
-                                    <span className='stat-label'>pH</span>
-                                    <span className='stat-value'>6.8</span>
-                                </div>
-                                <div className='stat-item'>
-                                    <span className='stat-label'>Temp</span>
-                                    <span className='stat-value'>26°C</span>
-                                </div>
-                                <div className='stat-item'>
-                                    <span className='stat-label'>TDS</span>
-                                    <span className='stat-value'>220</span>
-                                </div>
-                                <div className='stat-item'>
-                                    <span className='stat-label'>Turbidity</span>
-                                    <span className='stat-value'>90</span>
-                                </div>
-                                <div className='stat-item'>
-                                    <span className='stat-label'>Water Level</span>
-                                    <span className='stat-value'>90%</span>
-                                </div>
-                            </div>
-                            
-                            <div className='device-actions'>
-                                <button className='action-btn manage-btn' 
-                                        data-value='device2' 
-                                        onClick={(e) => handleManageDevice(e)}>
-                                    Manage
-                                </button>
-                                <button className='action-btn delete-btn'>
-                                    Delete
-                                </button>
-                            </div>
-                        </div>
-                        
-                        {/* Device 3 */}
-                        <div className='device-card'>
-                            <div className='device-header'>
-                                <div className='device-name-section'>
-                                    <h3>Fish Tank 3</h3>
-                                    <span className='device-status warning'>
-                                        <span className='status-dot'></span>
-                                        Warning
-                                    </span>
-                                </div>
-                                <div className='device-icon' data-value='device3' onClick={deviceAnalytics}>
-                                    <img src={analysisIcon} alt="Device icon"/>
-                                </div>
-                            </div>
-                            
-                            <div className='device-stats'>
-                                <div className='stat-item'>
-                                    <span className='stat-label'>pH</span>
-                                    <span className='stat-value'>8.1</span>
-                                </div>
-                                <div className='stat-item'>
-                                    <span className='stat-label'>Temp</span>
-                                    <span className='stat-value'>22°C</span>
-                                </div>
-                                <div className='stat-item'>
-                                    <span className='stat-label'>TDS</span>
-                                    <span className='stat-value'>190</span>
-                                </div>
-                                <div className='stat-item'>
-                                    <span className='stat-label'>Turbidity</span>
-                                    <span className='stat-value'>90</span>
-                                </div>
-                                <div className='stat-item'>
-                                    <span className='stat-label'>Water Level</span>
-                                    <span className='stat-value'>90%</span>
-                                </div>
-                            </div>
-                            
-                            <div className='device-actions'>
-                                <button className='action-btn manage-btn' 
-                                        data-value='device3' 
-                                        onClick={(e) => handleManageDevice(e)}>
-                                    Manage
-                                </button>
-                                <button className='action-btn delete-btn'>
-                                    Delete
-                                </button>
-                            </div>
-                        </div>
+                            )
+                        })}
                     </div>
 
                     {/* add-device*/}
@@ -529,10 +555,10 @@ const UserHome = () => {
                                 </div>
                                 
                                 <div className="device-name-display">
-                                    <span className="device-name">{devices.find(dev => dev.id === deviceToManage)?.name || 'Device'}</span>
-                                    <span className={`device-status ${deviceToManage.includes('1') ? 'online' : deviceToManage.includes('3') ? 'warning' : 'offline'}`}>
+                                    <span className="device-name">{device.deviceName}</span>
+                                    <span className={`device-status ${device.isOnline? (device.isWarning? 'warning' : 'online') : 'offline'}`}>
                                         <span className="status-dot"></span>
-                                        {deviceToManage.includes('1') ? 'Online' : deviceToManage.includes('3') ? 'Warning' : 'Offline'}
+                                        {device.isOnline? (device.isWarning? 'Warning' : 'Online') : 'Offline'}
                                     </span>
                                 </div>
                                 
@@ -542,11 +568,11 @@ const UserHome = () => {
                                         <div className="threshold-inputs">
                                             <div className="input-group">
                                                 <label>Minimum</label>
-                                                <input type="number" step="0.1" defaultValue="6.5" />
+                                                <input type="number" step="0.1" defaultValue={device.threshold?.ph.min || "6.5"} />
                                             </div>
                                             <div className="input-group">
                                                 <label>Maximum</label>
-                                                <input type="number" step="0.1" defaultValue="8.0" />
+                                                <input type="number" step="0.1" defaultValue={device.threshold?.ph.max || "8.0"} />
                                             </div>
                                         </div>
                                     </div>
@@ -556,12 +582,12 @@ const UserHome = () => {
                                         <div className="threshold-inputs">
                                             <div className="input-group">
                                                 <label>Minimum</label>
-                                                <input type="number" step="0.1" defaultValue="20.0" />
+                                                <input type="number" step="0.1" defaultValue={device.threshold?.temp.min || "20"} />
                                                 <span className="unit">°C</span>
                                             </div>
                                             <div className="input-group">
                                                 <label>Maximum</label>
-                                                <input type="number" step="0.1" defaultValue="28.0" />
+                                                <input type="number" step="0.1" defaultValue={device.threshold?.temp.max || "28"} />
                                                 <span className="unit">°C</span>
                                             </div>
                                         </div>
@@ -572,12 +598,12 @@ const UserHome = () => {
                                         <div className="threshold-inputs">
                                             <div className="input-group">
                                                 <label>Minimum</label>
-                                                <input type="number" defaultValue="150" />
+                                                <input type="number" defaultValue={device.threshold?.tds.min || "150"} />
                                                 <span className="unit">ppm</span>
                                             </div>
                                             <div className="input-group">
                                                 <label>Maximum</label>
-                                                <input type="number" defaultValue="250" />
+                                                <input type="number" defaultValue={device.threshold?.tds.max || "250"} />
                                                 <span className="unit">ppm</span>
                                             </div>
                                         </div>
@@ -588,12 +614,12 @@ const UserHome = () => {
                                         <div className="threshold-inputs">
                                             <div className="input-group">
                                                 <label>Minimum</label>
-                                                <input type="number" step="0.1" defaultValue="0" />
+                                                <input type="number" step="0.1" defaultValue={device.threshold?.turb.min || "0"} />
                                                 <span className="unit">NTU</span>
                                             </div>
                                             <div className="input-group">
                                                 <label>Maximum</label>
-                                                <input type="number" step="0.1" defaultValue="20.0" />
+                                                <input type="number" step="0.1" defaultValue={device.threshold?.turb.max || "20"} />
                                                 <span className="unit">NTU</span>
                                             </div>
                                         </div>
@@ -604,12 +630,12 @@ const UserHome = () => {
                                         <div className="threshold-inputs">
                                             <div className="input-group">
                                                 <label>Minimum</label>
-                                                <input type="number" defaultValue="70" />
+                                                <input type="number" defaultValue={device.threshold?.watlvl.min || "70"} />
                                                 <span className="unit">%</span>
                                             </div>
                                             <div className="input-group">
                                                 <label>Maximum</label>
-                                                <input type="number" defaultValue="100" />
+                                                <input type="number" defaultValue={device.threshold?.watlvl.max || "100"} />
                                                 <span className="unit">%</span>
                                             </div>
                                         </div>
@@ -618,8 +644,47 @@ const UserHome = () => {
                                 
                                 <div className="popup-actions">
                                     <button className="action-btn delete-btn" onClick={() => setDevicesPopUp('')}>Cancel</button>
-                                    <button className="action-btn manage-btn" onClick={() => {
-                                        // Here you would save the threshold values
+                                    <button className="action-btn manage-btn" onClick={async () => {
+                                        // Collect all threshold values from inputs
+                                        const form = document.querySelector('.threshold-form');
+                                        const inputs = form.querySelectorAll('input[type="number"]');
+                                        
+                                        // Create new threshold object
+                                        const newThresholds = {
+                                            ph: { min: 0, max: 0 },
+                                            temp: { min: 0, max: 0 },
+                                            tds: { min: 0, max: 0 },
+                                            turb: { min: 0, max: 0 },
+                                            watlvl: { min: 0, max: 0 }
+                                        };
+                                        
+                                        // pH inputs are at index 0 and 1
+                                        newThresholds.ph.min = parseFloat(inputs[0].value);
+                                        newThresholds.ph.max = parseFloat(inputs[1].value);
+                                        
+                                        // Temperature inputs are at index 2 and 3
+                                        newThresholds.temp.min = parseFloat(inputs[2].value);
+                                        newThresholds.temp.max = parseFloat(inputs[3].value);
+                                        
+                                        // TDS inputs are at index 4 and 5
+                                        newThresholds.tds.min = parseFloat(inputs[4].value);
+                                        newThresholds.tds.max = parseFloat(inputs[5].value);
+                                        
+                                        // Turbidity inputs are at index 6 and 7
+                                        newThresholds.turb.min = parseFloat(inputs[6].value);
+                                        newThresholds.turb.max = parseFloat(inputs[7].value);
+                                        
+                                        // Water Level inputs are at index 8 and 9
+                                        newThresholds.watlvl.min = parseFloat(inputs[8].value);
+                                        newThresholds.watlvl.max = parseFloat(inputs[9].value);
+                                        
+                                        // You can also save to database here
+                                        console.log("Saving thresholds:", newThresholds);
+
+                                        const deviceRef = ref(database, `/devices/${deviceToManage}/threshold`)
+                                        await set(deviceRef, newThresholds)
+
+                                        // Close popup
                                         setDevicesPopUp('');
                                     }}>Save Thresholds</button>
                                 </div>

@@ -45,12 +45,14 @@ const Login = () => {
                     username: user.username,
                     firstname: user.firstName,
                     lastname: user.lastName,
-                    email: user.email
+                    email: user.email,
+                    devices: user.devices ? Object.values(user.devices) : []
                 }
 
+                console.log('Storing...')
                 localStorage.setItem('userInfo', JSON.stringify(userInfo))
 
-                console.log(JSON.parse(localStorage.getItem('userInfo')))
+                console.log('Redirecting...')
                 navigate('/userhome')
             }else{
                 alert('Password Incorrect')

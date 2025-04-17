@@ -15,7 +15,7 @@
     box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
 
     position: sticky;
-    top: 0px;
+    top: 60px;
 
     z-index: 100;
 }
@@ -862,6 +862,7 @@
 
     .sidebar {
         box-sizing: border-box;
+        top: 0px !important;
     }
 
     .sidebar .items {
@@ -1058,6 +1059,7 @@
 
 .threshold-inputs {
     display: flex;
+    justify-content: center;
     gap: 20px;
 }
 

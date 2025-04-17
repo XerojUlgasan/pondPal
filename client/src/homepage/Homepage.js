@@ -8,8 +8,6 @@ import { useEffect } from "react"
 const Homepage = () => {
     const navigate = useNavigate()
 
-    console.log()
-
     useEffect(() => {
         if(localStorage.getItem('userInfo')){
             navigate('/userhome')
