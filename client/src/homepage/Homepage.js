@@ -1,18 +1,25 @@
 
 import "./Homepage.css"
-import database from "../firebaseConfig.js"
+import {auth, database} from "../firebaseConfig.js"
 import { set, ref, serverTimestamp } from "firebase/database"
 import { useNavigate } from "react-router-dom"
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 
 const Homepage = () => {
     const navigate = useNavigate()
 
     useEffect(() => {
-        if(localStorage.getItem('userInfo')){
-            navigate('/userhome')
-        }
-    }, [])
+
+        const unsubscribe = auth.onAuthStateChanged((user) => {
+            console.log("Auth state changed:", user)
+            
+            if(user){
+                navigate('/userhome')
+            }
+        })
+        
+        return () => unsubscribe()
+    }, []) 
 
     return (
         <div className="homepage">

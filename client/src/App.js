@@ -5,6 +5,8 @@ import { BrowserRouter, Routes, Route  } from 'react-router-dom';
 import Login from './login/Login';
 import Register from './register/Register';
 import UserHome from './userHome/UserHome';
+import { ToastContainer } from 'react-toastify'; // Fix import path
+import 'react-toastify/dist/ReactToastify.css';
 
 function App() {
   return (
@@ -22,7 +24,7 @@ function App() {
 
           <Route path="*" element={<h1>Error 404 - PAGE NOT FOUND</h1>}/>
         </Routes>
-
+        <ToastContainer/>
       </BrowserRouter>
     </div>
   );

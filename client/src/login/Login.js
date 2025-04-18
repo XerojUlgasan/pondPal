@@ -1,11 +1,15 @@
 import './Login.css'
 import logoimg from '../images/logo.png'
 import { data, Link, useNavigate } from 'react-router-dom';
-import database from '../firebaseConfig.js'
+import {auth, database, fireStoreDb} from '../firebaseConfig.js'
 import { child, equalTo, get, onChildAdded, onValue, orderByChild, query, ref } from 'firebase/database';
 import { useEffect, useState } from 'react';
+import { getAuth, GoogleAuthProvider, sendEmailVerification, signInWithEmailAndPassword, signInWithPopup } from 'firebase/auth';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { toast } from 'react-toastify';
 
 const Login = () => {
+    const provider = new GoogleAuthProvider()
     const navigate = useNavigate();
 
     const [details, setDetails] = useState({
@@ -21,53 +25,117 @@ const Login = () => {
         }))
     }
 
+    //SIGN IN WITH GOOGLE
+    const handleGooglePopUp = async () => {
+        const result = await signInWithPopup(auth, provider)
+        .catch(e => {
+            console.log(e)
+        })
+
+        if(result) {
+
+            const user = await getDoc(doc(fireStoreDb, 'users', result.user.uid))
+
+            if(!user.exists()){ //Create document in fire store if not exists
+                await setDoc(doc(fireStoreDb, 'users', result.user.uid), {
+                    email: result.user.email,
+                    devices: []
+                })
+                    .then(() => {
+                        toast.success(`Login Success`, {position: 'top-center'})
+                        navigate('/userhome')
+                    })
+                    .catch((e) => {
+                        toast.error('Error Occured', {position: 'bottom-center'})
+                    })
+            }else { 
+                toast.success(`Login Success`, {position: 'top-center'})
+                navigate('/userhome')
+            }
+        }
+    }
+
     const formSubmit = async (e) => {
         e.preventDefault()
 
-        const dataRef = ref(database, '/user')
-        const emailQuery = query(dataRef, orderByChild('email'), equalTo(details.email.toLowerCase()))
-        
-        try {
-            
-            const snapshot = await get(emailQuery)
-            const userData = snapshot.val()
-            
-            if(!userData){
-                alert('Email cannot find')
-                return
-            }
-
-            const user = userData[Object.keys(userData)[0]]
-
-            if(user.password === details.password){
-                const userInfo = {
-                    userId: Object.keys(userData)[0],
-                    username: user.username,
-                    firstname: user.firstName,
-                    lastname: user.lastName,
-                    email: user.email,
-                    devices: user.devices ? Object.values(user.devices) : []
-                }
-
-                console.log('Storing...')
-                localStorage.setItem('userInfo', JSON.stringify(userInfo))
-
-                console.log('Redirecting...')
-                navigate('/userhome')
-            }else{
-                alert('Password Incorrect')
-                return
-            }
-
-        } catch (error) {
-            alert(error)
+        if(details.email === null || details.email === ''){
+            toast.error('Invalid Email!', {position: 'bottom-center'})
+            return
         }
 
-    }
+        if(details.password === null || details.password === ''){
+            toast.error('Invalid Password!', {position: 'bottom-center'})
+            return
+        }
 
+        await signInWithEmailAndPassword(auth, details.email, details.password)
+            .then(() => {
+                toast.success(`Login Success`, {position: 'top-center'})
+                navigate('/userhome')
+            })
+            .catch((e) => {
+                if(e.error === 'auth/invalid-credential') {
+                    toast.error(`Invalid Credentials`, {position: 'bottom-center'})
+                }else{
+                    toast.error(`Error Occured`, {position: 'bottom-center'})
+                }
+            })
+
+        // const dataRef = ref(database, '/user')
+        // const emailQuery = query(dataRef, orderByChild('email'), equalTo(details.email.toLowerCase()))
+        
+        // try {
+            
+        //     const snapshot = await get(emailQuery)
+        //     const userData = snapshot.val()
+            
+        //     if(!userData){
+        //         alert('Email cannot find')
+        //         return
+        //     }
+
+        //     const user = userData[Object.keys(userData)[0]]
+
+        //     if(user.password === details.password){
+        //         const userInfo = {
+        //             userId: Object.keys(userData)[0],
+        //             username: user.username,
+        //             firstname: user.firstName,
+        //             lastname: user.lastName,
+        //             email: user.email,
+        //             devices: user.devices ? Object.values(user.devices) : []
+        //         }
+
+        //         console.log('Storing...')
+        //         localStorage.setItem('userInfo', JSON.stringify(userInfo))
+
+        //         console.log('Redirecting...')
+        //         navigate('/userhome')
+        //     }else{
+        //         alert('Password Incorrect')
+        //         return
+        //     }
+
+        // } catch (error) {
+        //     alert(error)
+        // }
+
+    }
+    const sendingVerification = async (user) => {
+        await sendEmailVerification(user)
+    }
     useEffect(() => {
-        if(localStorage.getItem("userInfo")) {
-            navigate('/userhome')
+        const unsubscribe = auth.onAuthStateChanged((user) => {
+            if(user?.emailVerified){
+                navigate('/userhome')
+            }
+        })
+        // if(localStorage.getItem("userInfo")) {
+        //     navigate('/userhome')
+        // }
+
+        return () => {
+            unsubscribe()
         }
     }, [])
 
@@ -104,6 +172,7 @@ const Login = () => {
                 className='submit'>Login</button> <br/>
 
                 <label>Don't have an account yet? <Link to='/register'>Click here to Sign Up</Link></label>
+                <label onClick={() => handleGooglePopUp()}><a>Continue With Google</a></label>
             </form>
         </div>
     )

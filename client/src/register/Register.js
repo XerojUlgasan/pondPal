@@ -1,13 +1,18 @@
 import './Register.css'
-import database from '../firebaseConfig.js'
+import {auth, database, fireStoreDb} from '../firebaseConfig.js'
 import { useState, useEffect, useRef } from 'react'
 import { child, equalTo, get, orderByChild, push, query, ref, set } from 'firebase/database';
 import { useNavigate } from "react-router-dom";
+import { createUserWithEmailAndPassword, sendEmailVerification } from 'firebase/auth';
+import { doc, setDoc } from 'firebase/firestore';
+import { toast } from 'react-toastify';
 // Import the eye icons from a popular icon library like FontAwesome or Feather Icons
 // If you don't want to use an icon library, we'll use text instead
 
 const Register = () => {
     const navigate = useNavigate()
+    const [isVerified, setIsVerified] = useState(false)
+    const [refreshTime, setRefreshTime] = useState(Date.now)
 
     // Initialize state with all form fields
     const [credentials, setCredentials] = useState({
@@ -58,34 +63,34 @@ const Register = () => {
         return Object.values(passwordErrors).every(value => value === true);
     };
 
-    const isEmailExist = async (email) => {
-        const dataRef = ref(database, '/user')
-        const emailQuery = query(dataRef, orderByChild('email'), equalTo(email))
+    // const isEmailExist = async (email) => {
+    //     const dataRef = ref(database, '/user')
+    //     const emailQuery = query(dataRef, orderByChild('email'), equalTo(email))
 
-        try {
-            const snapshot = await get(emailQuery);
-            return snapshot.exists(); 
-        } catch (e) {
-            console.error("Email check error:", e);
-            return true;
-        }
-    }
+    //     try {
+    //         const snapshot = await get(emailQuery);
+    //         return snapshot.exists(); 
+    //     } catch (e) {
+    //         console.error("Email check error:", e);
+    //         return true;
+    //     }
+    // }
 
-    const isUsernameExist = async (username) => {
-        const dataRef = ref(database, '/user')
+    // const isUsernameExist = async (username) => {
+    //     const dataRef = ref(database, '/user')
         
-        const usernameQuery = query(dataRef, 
-                                    orderByChild('username'), 
-                                    equalTo(username))
+    //     const usernameQuery = query(dataRef, 
+    //                                 orderByChild('username'), 
+    //                                 equalTo(username))
 
-        try {
-            const snapshot = await get(usernameQuery)
-            return snapshot.exists()
-        } catch (error) {
-            alert(error)
-            return true;
-        }
-    }
+    //     try {
+    //         const snapshot = await get(usernameQuery)
+    //         return snapshot.exists()
+    //     } catch (error) {
+    //         alert(error)
+    //         return true;
+    //     }
+    // }
 
     const registerButton = async (e) => {
         e.preventDefault()
@@ -95,40 +100,92 @@ const Register = () => {
             return;
         }
 
-        if(await isEmailExist(credentials.email.toLocaleLowerCase())){
-            alert('Email is already registered.')
-            return;
-        }
+        // if(await isEmailExist(credentials.email.toLocaleLowerCase())){
+        //     alert('Email is already registered.')
+        //     return;
+        // }
 
-        if(await isUsernameExist(credentials.username)){
-            alert('Username is already used.')
-            return;
-        }
+        // if(await isUsernameExist(credentials.username)){
+        //     alert('Username is already used.')
+        //     return;
+        // }
+
+        await createUserWithEmailAndPassword(auth, credentials.email, credentials.password)
+            .catch((e) => {
+                if(e.code === 'auth/email-already-in-use'){
+                    toast.error('Email is already registered', {position: 'bottom-center'})
+                }else{
+                    toast.error('Error has occured', {position: 'bottom-center'})
+                }
+            })
         
-        push(ref(database, '/user'), {
-            username: credentials.username,
-            email: credentials.email.toLowerCase(),
-            password: credentials.password,
-            lastName: credentials.lastName.toLowerCase(),
-            firstName: credentials.firstName.toLowerCase(),
-            middleName: credentials.middleName.toLowerCase(),
-            birthdate: credentials.birthdate.toLowerCase(),
-            cellphone: credentials.cellphone.toLowerCase()
-        })
-        .then(() => {
-            alert('Account successfully registered. Proceed to login.')
-            navigate("/login")
-        })
+        // push(ref(database, '/user'), {
+        //     username: credentials.username,
+        //     email: credentials.email.toLowerCase(),
+        //     password: credentials.password,
+        //     lastName: credentials.lastName.toLowerCase(),
+        //     firstName: credentials.firstName.toLowerCase(),
+        //     middleName: credentials.middleName.toLowerCase(),
+        //     birthdate: credentials.birthdate.toLowerCase(),
+        //     cellphone: credentials.cellphone.toLowerCase()
+        // })
+        // .then(() => {
+        //     alert('Account successfully registered. Proceed to login.')
+        //     navigate("/login")
+        // })
     }
 
     useEffect(() => {
         validatePassword(credentials.password, credentials.confirmPassword);
-
-        if(localStorage.getItem("userInfo")) {
-            navigate('/userhome')
-        }
-
     }, [credentials.password, credentials.confirmPassword]);
+
+    const [hasSent, setHasSent] = useState(false)
+
+    useEffect(() => {
+        const unsubscribe = auth.onAuthStateChanged((user) => {
+            if(user){
+                user.reload()
+                if(!user.emailVerified && !hasSent){ //NOT VERIFIED
+                    toast.success('Verification has been sent. Please check your email.', {position: 'top-center'})
+                    sendEmailVerification(user)
+                    setHasSent(prev => !prev)
+                }
+
+                if(user.emailVerified){ //VERIFIED
+                    toast.success('Verified Successfully!', {position: 'top-center'})
+
+                    setDoc(doc(fireStoreDb, "users", user.uid), {
+                        email: user.email,
+                        devices: []
+                    })
+                    .then(async () => {
+                        console.log('Email Inserted')
+                        toast.success('Account registered succesfully!', {position: 'top-center'})
+                        navigate('/login')
+                    })
+                    .catch((e) => {
+                        toast.error('Error occured', {position: 'bottom-center'})
+                    })
+                }
+            }
+        })
+
+        return () => {
+            unsubscribe()
+        }
+    }, [refreshTime])
+
+    useEffect(() => {
+        const interval = setInterval(() => {
+            setRefreshTime(Date.now());
+            console.log('Refresh')
+            console.log(auth.currentUser)
+        }, 5000); 
+
+        return (() => {
+            clearInterval(interval)
+        })
+    }, [])
 
     // Add state to control tooltip visibility
     const [showTooltip, setShowTooltip] = useState(false);
@@ -156,7 +213,7 @@ const Register = () => {
                         />
                     </div>
 
-                    <div className='input-group'>
+                    {/* <div className='input-group'>
                         <label>Username</label>
                         <input 
                             type='text' 
@@ -167,7 +224,7 @@ const Register = () => {
                             placeholder='Username'
                             required
                         />
-                    </div>
+                    </div> */}
 
                     <div className='input-group'>
                         <label>Password</label>
@@ -245,7 +302,7 @@ const Register = () => {
                     </div>
                 </div>
 
-                <div className='user-info info-cont'>
+                {/* <div className='user-info info-cont'>
                     <label className='title'>User Info</label>
                     <div className='cont'>
                         <div className='input-group'>
@@ -313,7 +370,7 @@ const Register = () => {
                         </div>
 
                     </div>
-                </div>
+                </div> */}
 
                 <div className='submit-cont'>
                     <button 

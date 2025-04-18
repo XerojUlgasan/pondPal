@@ -7,9 +7,12 @@ import analysisIcon from '../images/analysis.png';
 import devicesIcon from '../images/devices.png';
 import logoutIcon from '../images/logout.png'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { data, useNavigate } from 'react-router-dom';
-import database from '../firebaseConfig';
+import { data, UNSAFE_createClientRoutesWithHMRRevalidationOptOut, useNavigate } from 'react-router-dom';
+import {auth, database, fireStoreDb} from '../firebaseConfig';
 import { get, onValue, push, ref, set, update } from 'firebase/database';
+import { sendEmailVerification } from 'firebase/auth';
+import { arrayRemove, doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
+import { toast } from 'react-toastify';
 
 //userInfo:
 //
@@ -104,14 +107,7 @@ const UserHome = () => {
             watlvl: {min: 0, max: 0}
         }
     })
-    const [userInfo, setUserInfo] = useState({
-        devices: [],
-        email: '',
-        firstname: '',
-        lastname: '',
-        userId: '',
-        username: ''
-    });
+    const [userInfo, setUserInfo] = useState();
     const [deviceInfo, setDeviceInfo] = useState({
         deviceId: '',
         deviceName: ''
@@ -151,15 +147,15 @@ const UserHome = () => {
         setActiveItem(item);
 
         if(item === 'logout') {
-            localStorage.clear()
-            navigate('/')
+            auth.signOut()
         }
     };
 
     const handleManageDevice = (e) => {
         if(userInfo?.devices){
-            const index = userInfo.devices.findIndex(dev => dev.deviceId === e.currentTarget.dataset.value)
+            const index = userInfo.devices.findIndex(dev => dev.devId === e.currentTarget.dataset.value)
             setDevice(userInfo.devices[index])
+            console.log(index)
         }
         setDeviceToManage(e.currentTarget.dataset.value);
         setDevicesPopUp('manage');
@@ -175,67 +171,117 @@ const UserHome = () => {
     }
 
     const insertDeviceToDb = async () => {
+
         if(deviceInfo.deviceId === '' && deviceInfo.deviceName === ''){
-            alert('Please fill out all the fields.')
+            toast.error('Please fill out all the fields.', {position: 'bottom-center'})
             return
         }
 
-        if(userInfo == null){
-            alert('Something wrong with the user.')
-            return
+        if(userInfo?.devices){ //If user has existing devices
+            const hasSameName = (userInfo.devices.findIndex(dev => dev.devName === deviceInfo.deviceName) !== -1)
+            const hasSameId = (userInfo.devices.findIndex(dev => dev.devId === deviceInfo.deviceId) !== -1)
+    
+            if(userInfo && hasSameName){
+                toast.error('Device name is already used.', {position: 'bottom-center'})
+                return
+            }
+    
+            if(userInfo && hasSameId){
+                toast.error('Device ID is already used.', {position: 'bottom-center'})
+                return
+            }
         }
 
-        if(userInfo.devices.findIndex(dev => dev.deviceId === deviceInfo.deviceId) !== -1){
-            alert('Device ID is already added to your devices')
-            return
-        }
+        // if(userInfo == null){
+        //     alert('Something wrong with the user.')
+        //     return
+        // }
 
-        if(userInfo.devices.findIndex(dev => dev.deviceName === deviceInfo.deviceName) !== -1){
-            alert('Device name is already used on within your devices')
-            return
-        }
+        // if(userInfo.devices.findIndex(dev => dev.deviceId === deviceInfo.deviceId) !== -1){
+        //     alert('Device ID is already added to your devices')
+        //     return
+        // }
+
+        // if(userInfo.devices.findIndex(dev => dev.deviceName === deviceInfo.deviceName) !== -1){
+        //     alert('Device name is already used on within your devices')
+        //     return
+        // }
 
         try{
             //DEVICCE CHECKING IF IT EXISTS
+
             const deviceRef = ref(database, `/devices/${deviceInfo.deviceId}`)
             const snapshot = await get(deviceRef)
-            
+
             if(!snapshot.exists()){
-                alert('Device does not exist.')
+                toast.error('Device does not exist.', {position: 'bottom-center'})
                 return
             }
 
-            //REGISTERING CURRENT USER TO THE DEVICE'S USERS
-            const deviceUserRef = ref(database, `/devices/${deviceInfo.deviceId}/users`)
-            const uniqueKey = await push(deviceUserRef, userInfo?.username)
-            console.log('User is registered to the device successfully!')
+            // //REGISTERING CURRENT USER TO THE DEVICE'S USERS
+            // const deviceUserRef = ref(database, `/devices/${deviceInfo.deviceId}/users`)
+            // const uniqueKey = await push(deviceUserRef, userInfo?.username)
+            // console.log('User is registered to the device successfully!')
 
-            //ADDING DEVICE TO USER'S DEVICE
-            const userDevicesRef = ref(database, `/user/${userInfo?.userId}/devices`)
-            push(userDevicesRef, {
-                                    deviceId: deviceInfo.deviceId,
-                                    deviceName: deviceInfo.deviceName
-                                })
-            console.log('Device is registered to the user successfully!')
+            // //ADDING DEVICE TO USER'S DEVICE
+            // const userDevicesRef = ref(database, `/user/${userInfo?.userId}/devices`)
+            // push(userDevicesRef, {
+            //                         deviceId: deviceInfo.deviceId,
+            //                         deviceName: deviceInfo.deviceName
+            //                     })
+            // console.log('Device is registered to the user successfully!')
 
-            console.log('Updating user info...')
+            // console.log('Updating user info...')
+
+            // setUserInfo(prev => ({
+            //     ...prev,
+            //     devices: [...prev.devices, {
+            //                                 deviceId: deviceInfo.deviceId,
+            //                                 deviceName: deviceInfo.deviceName
+            //                                 }]
+            // }))
+
+            const newDevice = {
+                devName: deviceInfo.deviceName,
+                devId: deviceInfo.deviceId
+            }
+
             setUserInfo(prev => ({
                 ...prev,
-                devices: [...prev.devices, {
-                                            deviceId: deviceInfo.deviceId,
-                                            deviceName: deviceInfo.deviceName
-                                            }]
+                devices: [...(prev?.devices || []), newDevice]
             }))
+
+            const docRef = doc(fireStoreDb, 'users', auth.currentUser.uid)
+            const docData = await getDoc(docRef)
+            const data = docData.data()
+
+            if(!data?.devices){
+                await setDoc(docRef, {
+                    ...data,
+                    devices: [newDevice]
+                })
+            }else{
+                await updateDoc(doc(fireStoreDb, 'users', auth.currentUser.uid), {
+                    devices: [...data.devices, newDevice]
+                })
+                .then(async () => {
+                    toast.success('Device Added Successfully', {position: 'top-center'})
+                })
+                .catch(e => {
+                    console.log(e)
+                })   
+            }
 
             setDeviceInfo({
                 deviceId: '',
                 deviceName: ''
             })
 
+            setDevicesPopUp('')
+            return
+
         }catch(e){
             alert(e);
-        }finally{
-            console.log('Device added to userInfo')
         }
     }
 
@@ -348,77 +394,96 @@ const UserHome = () => {
     };
 
     useEffect(() => {
-        if(!localStorage.getItem("userInfo")) {
-            navigate('/')
-        }
+        // if(!localStorage.getItem("userInfo")) {
+        //     navigate('/')
+        // }
 
-        if(userInfo.userId === ''){
-            setUserInfo(prev => ({
-                ...prev,
-                ...JSON.parse(localStorage.getItem('userInfo'))
-            }))
-        }else {
-            localStorage.setItem('userInfo', JSON.stringify(userInfo))
-        }
+        const unsubscribe = auth.onAuthStateChanged(async (user) => {
+            if(user){
+                const docRef = doc(fireStoreDb, 'users', auth.currentUser.uid)
+                const userData = await getDoc(docRef)
+                const data = userData.data()
+        
+                setUserInfo(data)
+                console.log('User Logged in', user)
+                console.log(userInfo)
+            }else {
+                toast.error('No Account Logged In', {position: 'bottom-center'})
+                navigate('/')
+
+            }
+        })
+
+        // if(userInfo.userId === ''){
+        //     setUserInfo(prev => ({
+        //         ...prev,
+        //         ...JSON.parse(localStorage.getItem('userInfo'))
+        //     }))
+        // }else {
+        //     localStorage.setItem('userInfo', JSON.stringify(userInfo))
+        // }
 
         setChartData(generateData());
+        
+        return(() => {{
+            unsubscribe()
+        }})
     }, [selectedSensor, timePeriod, selectedDevice]);
 
     useEffect(() => {
+        console.log('Length changed')
         const unsubscribes = [];
 
-        if(userInfo.devices.length != 0){
+        if(userInfo?.devices){
             userInfo.devices.forEach(device => {
-                const userDeviceRef = ref(database, `/devices/${device.deviceId}`)
+                const userDeviceRef = ref(database, `/devices/${device.devId}`)
                 
                 const unsubscribe = onValue(userDeviceRef, (snapshot) => {
                     const deviceData = snapshot.val()
 
                     setUserInfo(prev => {
-                        const deviceIndex = prev.devices.findIndex(d => 
-                        d.deviceId === device.deviceId
-                        );
+
+                        const deviceIndex = prev.devices.findIndex(d => d.devId === device.devId);
                         
                         if(deviceIndex === -1) return prev;
 
-                        // Check if device is online (updated within last minute)
-                        const lastUpdateTime = new Date(deviceData.lastUpdate);
+                        const lastUpdateTime = new Date(deviceData?.lastUpdate);
                         const currentTime = new Date(Date.now());
                         const timeDifference = currentTime - lastUpdateTime;
-                        const isOnline = timeDifference < 60000; // 60000ms = 1 minute
+                        const isOnline = timeDifference < 60000;
 
-                        // Create new devices array with updated device data
                         const updatedDevices = [...prev.devices];
 
                         updatedDevices[deviceIndex] = {
                             ...updatedDevices[deviceIndex],
                             ...deviceData,
-                            isOnline // Add isOnline property
+                            isOnline
                         };
                         
                         return {
-                        ...prev,
-                        devices: updatedDevices
+                            ...prev,
+                            devices: updatedDevices
                         };
                     });
+                    console.log(userInfo)
                 })
                 unsubscribes.push(unsubscribe);
             })
         }
 
-        if(userInfo.userId != ''){
-            localStorage.setItem('userInfo', JSON.stringify(userInfo))   
-        }
-
         return () => {
             unsubscribes.forEach(unsub => unsub());
         };
-    }, [userInfo.devices.length, refreshTime])
+    }, [refreshTime, userInfo?.devices?.length])
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
     
     useEffect(() => {
         const interval = setInterval(() => {
         setRefreshTime(Date.now());
-
+            console.log('refresh')
         }, 60000); 
         return () => clearInterval(interval);
     }, []);
@@ -464,8 +529,7 @@ const UserHome = () => {
             {(activeItem === '') && (
                 <div className='content'>
                     <h1 className='title'>
-                        Welcome, <br/>
-                        {userInfo?.firstname ? (userInfo.firstname.charAt(0).toUpperCase() + userInfo.firstname.slice(1)) : ""}
+                        Welcome, Pal!
                     </h1>
 
                     <p>
@@ -482,13 +546,13 @@ const UserHome = () => {
                     {/* devices */}
                     <div className='devices'>
 
-                        {userInfo && userInfo?.devices && userInfo.devices.map(device => {
+                        {userInfo && userInfo?.devices && userInfo?.devices.map(device => {
 
                             return (
-                                <div className='device-card' key={device.deviceId}>
+                                <div className='device-card' key={device?.devId}>
                                     <div className='device-header'>
                                         <div className='device-name-section'>
-                                            <h3>{device.deviceName}</h3>
+                                            <h3>{device?.devName}</h3>
                                             <span className={`device-status ${device?.isOnline ? (device?.isWarning ? 'warning' : 'online') : 'offline'}`}>
                                                 <span className='status-dot'></span>
                                                 {device?.isOnline ? (device?.isWarning ? 'Warning' : 'Online') : 'Offline'}
@@ -524,11 +588,39 @@ const UserHome = () => {
                                     
                                     <div className='device-actions'>
                                         <button className='action-btn manage-btn' 
-                                                data-value={device.deviceId}
+                                                data-value={device.devId}
                                                 onClick={(e) => handleManageDevice(e)}>
                                             Manage
                                         </button>
-                                        <button className='action-btn delete-btn'>
+                                        <button className='action-btn delete-btn'
+                                                data-value={device.devId}
+                                                onClick={async (e) => {
+                                                    const devId = e.currentTarget.dataset.value
+                                                    const index = userInfo.devices.findIndex(d => d.devId === devId)
+
+                                                    setUserInfo(prev => {
+                                                        const newArray = [...prev.devices]
+                                                        newArray.splice(index, 1)
+
+                                                        return {
+                                                            ...prev,
+                                                            devices: newArray
+                                                        }
+                                                    })
+                                                    console.log(userInfo.devices)
+                                                    await updateDoc(doc(fireStoreDb, 'users', auth.currentUser.uid), {
+                                                        devices: arrayRemove({
+                                                                                devId: userInfo?.devices[index]?.devId,
+                                                                                devName: userInfo?.devices[index]?.devName
+                                                                            })
+                                                    })
+                                                    .then(() => {
+                                                        toast.success('Device Removed', {position: 'top-center'})
+                                                    })
+                                                    .catch(e => {
+                                                        toast.error('Error Occured', {position: 'bottom-center'})
+                                                    })
+                                                }}>
                                             Delete
                                         </button>
                                     </div>
@@ -555,7 +647,7 @@ const UserHome = () => {
                                 </div>
                                 
                                 <div className="device-name-display">
-                                    <span className="device-name">{device.deviceName}</span>
+                                    <span className="device-name">{device.devName}</span>
                                     <span className={`device-status ${device.isOnline? (device.isWarning? 'warning' : 'online') : 'offline'}`}>
                                         <span className="status-dot"></span>
                                         {device.isOnline? (device.isWarning? 'Warning' : 'Online') : 'Offline'}
@@ -683,6 +775,12 @@ const UserHome = () => {
 
                                         const deviceRef = ref(database, `/devices/${deviceToManage}/threshold`)
                                         await set(deviceRef, newThresholds)
+                                        .then(() => {
+                                            toast.success('Threshold Updated', {position: 'top-center'})
+                                        })
+                                        .catch((e) => {
+                                            toast.error('Error Occured', {position: 'bottom-center'})
+                                        })
 
                                         // Close popup
                                         setDevicesPopUp('');
