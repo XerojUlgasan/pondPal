@@ -113,9 +113,9 @@ const Register = () => {
         await createUserWithEmailAndPassword(auth, credentials.email, credentials.password)
             .catch((e) => {
                 if(e.code === 'auth/email-already-in-use'){
-                    toast.error('Email is already registered', {position: 'bottom-center'})
+                    toast.error('Email is already registered', {position: 'bottom-center', autoClose: 2000, pauseOnHover: false})
                 }else{
-                    toast.error('Error has occured', {position: 'bottom-center'})
+                    toast.error('Error has occured', {position: 'bottom-center', autoClose: 2000, pauseOnHover: false})
                 }
             })
         
@@ -146,13 +146,13 @@ const Register = () => {
             if(user){
                 user.reload()
                 if(!user.emailVerified && !hasSent){ //NOT VERIFIED
-                    toast.success('Verification has been sent. Please check your email.', {position: 'top-center'})
+                    toast.success('Verification has been sent. Please check your email.', {position: 'top-center', autoClose: 2000, pauseOnHover: false})
                     sendEmailVerification(user)
                     setHasSent(prev => !prev)
                 }
 
                 if(user.emailVerified){ //VERIFIED
-                    toast.success('Verified Successfully!', {position: 'top-center'})
+                    toast.success('Verified Successfully!', {position: 'top-center', autoClose: 2000, pauseOnHover: false})
 
                     setDoc(doc(fireStoreDb, "users", user.uid), {
                         email: user.email,
@@ -160,11 +160,11 @@ const Register = () => {
                     })
                     .then(async () => {
                         console.log('Email Inserted')
-                        toast.success('Account registered succesfully!', {position: 'top-center'})
+                        toast.success('Account registered succesfully!', {position: 'top-center', autoClose: 2000, pauseOnHover: false})
                         navigate('/login')
                     })
                     .catch((e) => {
-                        toast.error('Error occured', {position: 'bottom-center'})
+                        toast.error('Error occured', {position: 'bottom-center', autoClose: 2000, pauseOnHover: false})
                     })
                 }
             }

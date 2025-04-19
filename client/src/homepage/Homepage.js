@@ -1,12 +1,21 @@
 
 import "./Homepage.css"
 import {auth, database} from "../firebaseConfig.js"
-import { set, ref, serverTimestamp } from "firebase/database"
+import { set, ref, serverTimestamp, update, push } from "firebase/database"
 import { useNavigate } from "react-router-dom"
 import { useEffect, useState } from "react"
 
 const Homepage = () => {
     const navigate = useNavigate()
+    // push(ref(database, `devices/0/notifications`), {
+    //     max: 250,
+    //     min: 150,
+    //     sensor: "tds",
+    //     sensorVal: 255,
+    //     time: 1745040323572
+    // })
+    // console.log('Pushed')
+
 
     useEffect(() => {
 

@@ -42,14 +42,14 @@ const Login = () => {
                     devices: []
                 })
                     .then(() => {
-                        toast.success(`Login Success`, {position: 'top-center'})
+                        toast.success(`Login Success`, {position: 'top-center', autoClose: 2000, pauseOnHover: false})
                         navigate('/userhome')
                     })
                     .catch((e) => {
-                        toast.error('Error Occured', {position: 'bottom-center'})
+                        toast.error('Error Occured', {position: 'bottom-center', autoClose: 2000, pauseOnHover: false})
                     })
             }else { 
-                toast.success(`Login Success`, {position: 'top-center'})
+                toast.success(`Login Success`, {position: 'top-center', autoClose: 2000, pauseOnHover: false})
                 navigate('/userhome')
             }
         }
@@ -59,25 +59,25 @@ const Login = () => {
         e.preventDefault()
 
         if(details.email === null || details.email === ''){
-            toast.error('Invalid Email!', {position: 'bottom-center'})
+            toast.error('Invalid Email!', {position: 'bottom-center', autoClose: 2000, autoClose: 2000, pauseOnHover: false})
             return
         }
 
         if(details.password === null || details.password === ''){
-            toast.error('Invalid Password!', {position: 'bottom-center'})
+            toast.error('Invalid Password!', {position: 'bottom-center', autoClose: 2000, pauseOnHover: false})
             return
         }
 
         await signInWithEmailAndPassword(auth, details.email, details.password)
             .then(() => {
-                toast.success(`Login Success`, {position: 'top-center'})
+                toast.success(`Login Success`, {position: 'top-center', autoClose: 2000, pauseOnHover: false})
                 navigate('/userhome')
             })
             .catch((e) => {
                 if(e.error === 'auth/invalid-credential') {
-                    toast.error(`Invalid Credentials`, {position: 'bottom-center'})
+                    toast.error(`Invalid Credentials`, {position: 'bottom-center', autoClose: 2000, pauseOnHover: false})
                 }else{
-                    toast.error(`Error Occured`, {position: 'bottom-center'})
+                    toast.error(`Error Occured`, {position: 'bottom-center', autoClose: 2000, pauseOnHover: false})
                 }
             })
 

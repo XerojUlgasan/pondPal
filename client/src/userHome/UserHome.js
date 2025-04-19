@@ -9,10 +9,10 @@ import logoutIcon from '../images/logout.png'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { data, UNSAFE_createClientRoutesWithHMRRevalidationOptOut, useNavigate } from 'react-router-dom';
 import {auth, database, fireStoreDb} from '../firebaseConfig';
-import { get, onValue, push, ref, set, update } from 'firebase/database';
+import { get, limitToFirst, limitToLast, onValue, orderByChild, push, query, ref, set, update } from 'firebase/database';
 import { sendEmailVerification } from 'firebase/auth';
-import { arrayRemove, doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
-import { toast } from 'react-toastify';
+import { arrayRemove, collectionGroup, doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
+import { toast, ToastContainer } from 'react-toastify';
 
 //userInfo:
 //
@@ -82,7 +82,7 @@ const UserHome = () => {
     const [selectedSensor, setSelectedSensor] = useState('all');
     const [chartData, setChartData] = useState([]);
     const [timePeriod, setTimePeriod] = useState('weekly');
-    const [selectedDevice, setSelectedDevice] = useState('all');
+    const [selectedDevice, setSelectedDevice] = useState('');
     const [deviceToManage, setDeviceToManage] = useState('');
     const [devicesPopUp, setDevicesPopUp] = useState('');
     const [refreshTime, setRefreshTime] = useState(Date.now());
@@ -112,6 +112,7 @@ const UserHome = () => {
         deviceId: '',
         deviceName: ''
     })
+    const [notifs, setNotifs] = useState([])
     const navigate = useNavigate();
 
     // Handler for sensor selection change
@@ -173,7 +174,7 @@ const UserHome = () => {
     const insertDeviceToDb = async () => {
 
         if(deviceInfo.deviceId === '' && deviceInfo.deviceName === ''){
-            toast.error('Please fill out all the fields.', {position: 'bottom-center'})
+            toast.error('Please fill out all the fields.', {position: 'bottom-center', autoClose: 2000, pauseOnHover: false})
             return
         }
 
@@ -182,12 +183,12 @@ const UserHome = () => {
             const hasSameId = (userInfo.devices.findIndex(dev => dev.devId === deviceInfo.deviceId) !== -1)
     
             if(userInfo && hasSameName){
-                toast.error('Device name is already used.', {position: 'bottom-center'})
+                toast.error('Device name is already used.', {position: 'bottom-center', autoClose: 2000, pauseOnHover: false})
                 return
             }
     
             if(userInfo && hasSameId){
-                toast.error('Device ID is already used.', {position: 'bottom-center'})
+                toast.error('Device ID is already used.', {position: 'bottom-center', autoClose: 2000, pauseOnHover: false})
                 return
             }
         }
@@ -196,12 +197,10 @@ const UserHome = () => {
         //     alert('Something wrong with the user.')
         //     return
         // }
-
         // if(userInfo.devices.findIndex(dev => dev.deviceId === deviceInfo.deviceId) !== -1){
         //     alert('Device ID is already added to your devices')
         //     return
         // }
-
         // if(userInfo.devices.findIndex(dev => dev.deviceName === deviceInfo.deviceName) !== -1){
         //     alert('Device name is already used on within your devices')
         //     return
@@ -214,7 +213,7 @@ const UserHome = () => {
             const snapshot = await get(deviceRef)
 
             if(!snapshot.exists()){
-                toast.error('Device does not exist.', {position: 'bottom-center'})
+                toast.error('Device does not exist.', {position: 'bottom-center', autoClose: 2000, pauseOnHover: false})
                 return
             }
 
@@ -265,12 +264,19 @@ const UserHome = () => {
                     devices: [...data.devices, newDevice]
                 })
                 .then(async () => {
-                    toast.success('Device Added Successfully', {position: 'top-center'})
+                    toast.success('Device Added Successfully', {position: 'top-center', autoClose: 2000, pauseOnHover: false})
                 })
                 .catch(e => {
                     console.log(e)
                 })   
             }
+
+            //Inserting users to he devices for device notification
+            const devRef = ref(database, `/devices/${deviceInfo.deviceId}/users`)
+            await push(devRef, auth.currentUser.email)
+            .catch((e) => {
+                toast.error('Error Occured', {position: 'top-center', autoClose: 2000, pauseOnHover: false})
+            })
 
             setDeviceInfo({
                 deviceId: '',
@@ -304,21 +310,29 @@ const UserHome = () => {
 
     // Time period options
     const timePeriodOptions = [
-        { value: 'daily', label: 'Daily' },
-        { value: 'weekly', label: 'Weekly' },
-        { value: 'monthly', label: 'Monthly' },
+        { value: 'daily', label: 'Today' },
+        { value: 'weekly', label: 'Last 7 days' },
+        { value: 'monthly', label: 'Last 30 days' },
     ];
 
     // Calculate average values based on chartData
     const calculateAverages = () => {
-        if (chartData.length === 0) return {};
+        if (!Array.isArray(chartData) || chartData.length === 0) return {};
         
-        const sensors = ['ph', 'temp', 'tds', 'turbidity', 'waterLevel'];
+        // Match these names to your Firebase data structure
+        const sensors = ['ph', 'temp', 'tds', 'turb', 'watlvl'];
         const averages = {};
         
         sensors.forEach(sensor => {
-            const values = chartData.filter(item => item[sensor] !== undefined)
-                                    .map(item => item[sensor]);
+            const values = chartData
+                .filter(item => item[sensor] !== undefined)
+                .map(item => {
+                    // Handle percentage strings like "85%"
+                    if (typeof item[sensor] === 'string' && item[sensor].includes('%')) {
+                        return parseFloat(item[sensor]);
+                    }
+                    return item[sensor];
+                });
 
             if (values.length > 0) {
                 const sum = values.reduce((a, b) => a + b, 0);
@@ -329,73 +343,197 @@ const UserHome = () => {
         return averages;
     };
 
+    useEffect(() => {
+        const fetchData = async () => {
+            try {
+                const data = await generateData();
+                if (Array.isArray(data)) {
+                    setChartData(data);
+                } else {
+                    setChartData([]);
+                }
+            } catch (error) {
+                console.error("Error fetching chart data:", error);
+                setChartData([]);
+            }
+        };
+        
+        fetchData();
+    }, [selectedSensor, timePeriod, selectedDevice]);
+
     // Generate sample data based on selected sensor
-    const generateData = () => { // THIS FUNCTION CREATES ONLY A SAMPLE DATA
+    const generateData = async () => {
+        if(!userInfo?.devices) {
+            toast.error('You have no devices yet.', {position: 'bottom-center', pauseOnHover: false, autoClose: 2000})
+            return
+        }
+
         const data = [];
-        
-        // Determine number of data points based on time period
-        const dataPoints = timePeriod === 'daily' ? 24 : 
-                        timePeriod === 'weekly' ? 7 : 
-                        30; // monthly
-        
-        // Create timestamps based on time period
-        for (let i = dataPoints - 1; i >= 0; i--) {
-            const date = new Date();
-            let formattedDate;
-            
-            if (timePeriod === 'daily') {
-                date.setHours(date.getHours() - i);
-                formattedDate = date.toLocaleTimeString('en-US', {
-                    hour: '2-digit',
-                    minute: '2-digit',
+
+        //selectedDevice == devId
+        //timePeriod = daily, weekly, monthly
+
+        if(timePeriod === 'daily') {
+            const currDate = new Date(Date.now()).toISOString().split('T')[0] // YYYY-MM-DD
+            const devRecordRef = ref(database, `/devices/${selectedDevice}/records/${currDate}`)
+            const snapshot = await get(devRecordRef)
+
+            if(snapshot.exists()){
+                const recordData = snapshot.val()
+                Object.keys(recordData).forEach(hour => {
+                    const record = {
+                        date: hour,
+                        ...recordData[hour]
+                    }
+
+                    data.push(record)
+                })
+
+                data.sort((a, b) => {
+                    const timeA = a.date.split(':').map(Number);
+                    const timeB = b.date.split(':').map(Number);
+                    return (timeA[0] * 60 + timeA[1]) - (timeB[0] * 60 + timeB[1]);
                 });
-            } else if (timePeriod === 'weekly') {
+
+                console.log(data)
+            }else{
+                toast.error('Device has no current record of your chosen date', {position: 'bottom-center', pauseOnHover: false, autoClose: 2000})
+                return
+            }
+        }
+
+        // Add to generateData function
+        if(timePeriod === 'weekly') {
+            // Get data for the past 7 days
+            const today = new Date();
+            const data = [];
+            
+            for(let i = 6; i >= 0; i--) {
+                const date = new Date(today);
                 date.setDate(date.getDate() - i);
-                formattedDate = date.toLocaleDateString('en-US', {
-                    weekday: 'short',
-                    day: 'numeric'
-                });
-            } else {
-                date.setDate(date.getDate() - i);
-                formattedDate = date.toLocaleDateString('en-US', {
-                    month: 'short',
-                    day: 'numeric'
-                });
+                const formattedDate = date.toISOString().split('T')[0]; // YYYY-MM-DD
+                
+                const devRecordRef = ref(database, `/devices/${selectedDevice}/records/${formattedDate}`);
+                const snapshot = await get(devRecordRef);
+                
+                if(snapshot.exists()) {
+                    // Calculate daily averages
+                    const dailyData = snapshot.val();
+                    const dailyAverages = {
+                        date: date.toLocaleDateString('en-US', { weekday: 'short', day: 'numeric' }),
+                        ph: 0, temp: 0, tds: 0, turb: 0, watlvl: 0,
+                        count: { ph: 0, temp: 0, tds: 0, turb: 0, watlvl: 0 }
+                    };
+                    
+                    // Sum all readings for this day
+                    Object.values(dailyData).forEach(hourData => {
+                        if(hourData.ph) { dailyAverages.ph += parseFloat(hourData.ph); dailyAverages.count.ph++; }
+                        if(hourData.temp) { dailyAverages.temp += parseFloat(hourData.temp); dailyAverages.count.temp++; }
+                        if(hourData.tds) { dailyAverages.tds += parseFloat(hourData.tds); dailyAverages.count.tds++; }
+                        if(hourData.turb) { dailyAverages.turb += parseFloat(hourData.turb); dailyAverages.count.turb++; }
+                        
+                        // Handle percentage string in watlvl
+                        if(hourData.watlvl !== undefined && hourData.watlvl !== null) {
+                            let watlvlValue;
+                            if (typeof hourData.watlvl === 'string') {
+                                watlvlValue = parseFloat(hourData.watlvl);
+                            } else {
+                                watlvlValue = hourData.watlvl;
+                            }
+                            dailyAverages.watlvl += watlvlValue;
+                            dailyAverages.count.watlvl++;
+                        }
+                    });
+                    
+                    // Calculate averages
+                    if(dailyAverages.count.ph > 0) dailyAverages.ph /= dailyAverages.count.ph;
+                    if(dailyAverages.count.temp > 0) dailyAverages.temp /= dailyAverages.count.temp;
+                    if(dailyAverages.count.tds > 0) dailyAverages.tds /= dailyAverages.count.tds;
+                    if(dailyAverages.count.turb > 0) dailyAverages.turb /= dailyAverages.count.turb;
+                    if(dailyAverages.count.watlvl > 0) dailyAverages.watlvl /= dailyAverages.count.watlvl;
+                    
+                    // Remove count property
+                    delete dailyAverages.count;
+                    
+                    data.push(dailyAverages);
+                }
             }
             
-            // Generate different data patterns based on selected sensor
-            let entry = { date: formattedDate };
-            
-            // Add slight variance based on device selection
-            const deviceVariance = selectedDevice === 'device1' ? 0 : 
-                                    selectedDevice === 'device2' ? -0.5 : 
-                                    selectedDevice === 'device3' ? 0 : 0.5;
-            
-            if (selectedSensor === 'all' || selectedSensor === 'ph') {
-                entry.ph = 6 + Math.random() * 2 + deviceVariance; // pH between 6-8
-            }
-            if (selectedSensor === 'all' || selectedSensor === 'temp') {
-                entry.temp = 20 + Math.random() * 8 + deviceVariance; // Temp between 20-28°C
-            }
-            if (selectedSensor === 'all' || selectedSensor === 'dissolved solids') {
-                entry.tds = 150 + Math.random() * 100 + (deviceVariance * 20); // TDS between 150-250 ppm
-            }
-            if (selectedSensor === 'all' || selectedSensor === 'turbidity') {
-                entry.turbidity = 5 + Math.random() * 15 + (deviceVariance * 3); // Turbidity between 5-20 NTU
-            }
-            if (selectedSensor === 'all' || selectedSensor === 'water level') {
-                entry.waterLevel = 70 + Math.random() * 20 + (deviceVariance * 5); // Water level between 70-90%
-            }
-            
-            data.push(entry);
+            return data;
         }
         
+        if(timePeriod === 'monthly') {
+            // Get data for the past 30 days (similar approach to weekly)
+            const today = new Date();
+            const data = [];
+            
+            for(let i = 29; i >= 0; i--) {
+                const date = new Date(today);
+                date.setDate(date.getDate() - i);
+                const formattedDate = date.toISOString().split('T')[0]; // YYYY-MM-DD
+                
+                const devRecordRef = ref(database, `/devices/${selectedDevice}/records/${formattedDate}`);
+                const snapshot = await get(devRecordRef);
+                
+                if(snapshot.exists()) {
+                    // Similar averaging logic as weekly
+                    const dailyData = snapshot.val();
+                    const dailyAverages = {
+                        date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+                        ph: 0, temp: 0, tds: 0, turb: 0, watlvl: 0,
+                        count: { ph: 0, temp: 0, tds: 0, turb: 0, watlvl: 0 }
+                    };
+                    
+                    // Calculate averages (same as weekly)
+                    Object.values(dailyData).forEach(hourData => {
+                        if(hourData.ph) { dailyAverages.ph += parseFloat(hourData.ph); dailyAverages.count.ph++; }
+                        if(hourData.temp) { dailyAverages.temp += parseFloat(hourData.temp); dailyAverages.count.temp++; }
+                        if(hourData.tds) { dailyAverages.tds += parseFloat(hourData.tds); dailyAverages.count.tds++; }
+                        if(hourData.turb) { dailyAverages.turb += parseFloat(hourData.turb); dailyAverages.count.turb++; }
+                        
+                        if(hourData.watlvl !== undefined && hourData.watlvl !== null) {
+                            let watlvlValue;
+                            if (typeof hourData.watlvl === 'string') {
+                                watlvlValue = parseFloat(hourData.watlvl);
+                            } else {
+                                watlvlValue = hourData.watlvl;
+                            }
+                            dailyAverages.watlvl += watlvlValue;
+                            dailyAverages.count.watlvl++;
+                        }
+                    });
+                    
+                    // Calculate final averages
+                    if(dailyAverages.count.ph > 0) dailyAverages.ph /= dailyAverages.count.ph;
+                    if(dailyAverages.count.temp > 0) dailyAverages.temp /= dailyAverages.count.temp;
+                    if(dailyAverages.count.tds > 0) dailyAverages.tds /= dailyAverages.count.tds;
+                    if(dailyAverages.count.turb > 0) dailyAverages.turb /= dailyAverages.count.turb;
+                    if(dailyAverages.count.watlvl > 0) dailyAverages.watlvl /= dailyAverages.count.watlvl;
+                    
+                    delete dailyAverages.count;
+                    data.push(dailyAverages);
+                }
+            }
+            
+            return data;
+        }
+
+        console.log(data)
         return data;
     };
 
     useEffect(() => {
         // if(!localStorage.getItem("userInfo")) {
         //     navigate('/')
+        // }
+
+        // if(userInfo.userId === ''){
+        //     setUserInfo(prev => ({
+        //         ...prev,
+        //         ...JSON.parse(localStorage.getItem('userInfo'))
+        //     }))
+        // }else {
+        //     localStorage.setItem('userInfo', JSON.stringify(userInfo))
         // }
 
         const unsubscribe = auth.onAuthStateChanged(async (user) => {
@@ -408,20 +546,11 @@ const UserHome = () => {
                 console.log('User Logged in', user)
                 console.log(userInfo)
             }else {
-                toast.error('No Account Logged In', {position: 'bottom-center'})
+                toast.error('Signed Out', {position: 'bottom-center', autoClose: 2000, pauseOnHover: false, pauseOnHover: false})
                 navigate('/')
 
             }
         })
-
-        // if(userInfo.userId === ''){
-        //     setUserInfo(prev => ({
-        //         ...prev,
-        //         ...JSON.parse(localStorage.getItem('userInfo'))
-        //     }))
-        // }else {
-        //     localStorage.setItem('userInfo', JSON.stringify(userInfo))
-        // }
 
         setChartData(generateData());
         
@@ -431,7 +560,6 @@ const UserHome = () => {
     }, [selectedSensor, timePeriod, selectedDevice]);
 
     useEffect(() => {
-        console.log('Length changed')
         const unsubscribes = [];
 
         if(userInfo?.devices){
@@ -475,11 +603,8 @@ const UserHome = () => {
             unsubscribes.forEach(unsub => unsub());
         };
     }, [refreshTime, userInfo?.devices?.length])
-
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
     
+    //Refresher
     useEffect(() => {
         const interval = setInterval(() => {
         setRefreshTime(Date.now());
@@ -488,13 +613,59 @@ const UserHome = () => {
         return () => clearInterval(interval);
     }, []);
 
-    useEffect(()=> {
-        console.log(userInfo)
-    }, [userInfo])
+    //For notifications
+    useEffect(() => {
+        const unsubs = []
+
+        if(userInfo?.devices) {
+            userInfo.devices.forEach(device => {
+                const devRef = ref(database, `/devices/${device.devId}/notifications`)
+                // Add limitToLast to restrict query to recent notifications
+                const notifQuery = query(devRef, orderByChild('time'), limitToLast(20))
+                
+                const unsub = onValue(notifQuery, (snapshot) => {
+                    if (snapshot.exists()) {
+                        const notifData = snapshot.val()
+                        console.log(notifData)
+                        // Convert Firebase object to array
+                        const notifArray = Object.keys(notifData).map(key => ({
+                            id: key,
+                            name: device.devName,
+                            ...notifData[key]
+                        }))
+                        
+                        // Sort by time (newest first)
+                        notifArray.sort((a, b) => b.time - a.time)
+                        
+                        // Update state with sorted notifications
+                        setNotifs(prev => [...notifArray, ...prev.filter(n => 
+                            !notifArray.some(newNotif => newNotif.id === n.id)
+                        )])
+
+                        toast.info('New notification has arrived.', {position: 'top-right', pauseOnHover: false, theme: 'colored'})
+                    }
+                }, (error) => {
+                    console.error(`Error getting notifications for device ${device.devId}:`, error)
+                })
+
+                unsubs.push(unsub)
+            })
+        }
+
+        return () => {
+            unsubs.forEach(unsub => unsub())
+        }
+    }, [userInfo?.devices?.length])
 
     useEffect(() => {
-        console.log(device)
-    }, [device])
+        console.log(notifs)
+    }, [notifs])
+
+    useEffect(() => {
+        if (userInfo?.devices && userInfo.devices.length > 0 && !selectedDevice) {
+            setSelectedDevice(userInfo.devices[0].devId);
+        }
+    }, [userInfo?.devices, selectedDevice]);
 
     const averages = calculateAverages();
 
@@ -558,7 +729,7 @@ const UserHome = () => {
                                                 {device?.isOnline ? (device?.isWarning ? 'Warning' : 'Online') : 'Offline'}
                                             </span>
                                         </div>
-                                        <div className='device-icon' data-value='device3' onClick={deviceAnalytics}>
+                                        <div className='device-icon' data-value={device?.devId} onClick={deviceAnalytics}>
                                             <img src={analysisIcon} alt="Device icon"/>
                                         </div>
                                     </div>
@@ -615,10 +786,10 @@ const UserHome = () => {
                                                                             })
                                                     })
                                                     .then(() => {
-                                                        toast.success('Device Removed', {position: 'top-center'})
+                                                        toast.success('Device Removed', {position: 'top-center', autoClose: 2000, pauseOnHover: false})
                                                     })
                                                     .catch(e => {
-                                                        toast.error('Error Occured', {position: 'bottom-center'})
+                                                        toast.error('Error Occured', {position: 'bottom-center', autoClose: 2000, pauseOnHover: false})
                                                     })
                                                 }}>
                                             Delete
@@ -776,10 +947,10 @@ const UserHome = () => {
                                         const deviceRef = ref(database, `/devices/${deviceToManage}/threshold`)
                                         await set(deviceRef, newThresholds)
                                         .then(() => {
-                                            toast.success('Threshold Updated', {position: 'top-center'})
+                                            toast.success('Threshold Updated', {position: 'top-center', autoClose: 2000, pauseOnHover: false})
                                         })
                                         .catch((e) => {
-                                            toast.error('Error Occured', {position: 'bottom-center'})
+                                            toast.error('Error Occured', {position: 'bottom-center', autoClose: 2000, pauseOnHover: false})
                                         })
 
                                         // Close popup
@@ -852,7 +1023,7 @@ const UserHome = () => {
                     <div className='analysis-top'>
 
                         {/* graph */}
-                        <div className='analysis-left'>
+                        <div className='analysis-left'>  
                             <div className='filters'>
                                 <div className="sensor-dropdown">
                                     <select 
@@ -945,7 +1116,7 @@ const UserHome = () => {
                                         {selectedSensor === 'all' || selectedSensor === 'turbidity' ? (
                                             <Line 
                                                 type="monotone" 
-                                                dataKey="turbidity" 
+                                                dataKey="turb" 
                                                 name="Turbidity" 
                                                 stroke={getSensorConfig('turbidity').color}
                                                 strokeWidth={1.5}
@@ -958,7 +1129,7 @@ const UserHome = () => {
                                         {selectedSensor === 'all' || selectedSensor === 'water level' ? (
                                             <Line 
                                                 type="monotone" 
-                                                dataKey="waterLevel" 
+                                                dataKey="watlvl" 
                                                 name="Water Level" 
                                                 stroke={getSensorConfig('waterLevel').color}
                                                 strokeWidth={1.5}
@@ -996,9 +1167,9 @@ const UserHome = () => {
                                         onChange={handleDeviceChange}
                                         className="filter-select"
                                     >
-                                        {devices.map(device => (
-                                            <option key={device.id} value={device.id}>
-                                                {device.name}
+                                        {userInfo?.devices.map(device => (
+                                            <option key={device.devId} value={device.devId}>
+                                                {device.devName}
                                             </option>
                                         ))}
                                     </select>
