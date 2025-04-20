@@ -1,114 +1,181 @@
+/* Modern Navbar with Animations */
+:root {
+    --primary-blue: #2e9cfd;
+    --primary-blue-hover: #1a8aea;
+    --dark-blue: #273f5c;
+    --light-blue: #f0f8ff;
+    --background: #f9fafc;
+    --text-dark: #333;
+    --shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    --animation-duration: 0.6s;
+}
+
 .navbar {
     width: 100%;
-    height: fit-content;
-    background-color: #d9d9d9;
-
+    height: 70px;
+    background-color: white;
     display: flex;
     justify-content: space-between;
     align-items: center;
-
     position: sticky;
     top: 0px;
-
     z-index: 99;
+    box-shadow: var(--shadow);
+    animation: slideDown 0.6s ease-out;
+    border-bottom: 1px solid rgba(46, 156, 253, 0.1);
+    padding: 0 20px;
+    box-sizing: border-box;
 }
 
 .navbar .left, 
 .navbar .right {
     display: flex;
     align-items: center;
-    max-height: 50px;
-    margin: 5px 20px;
+    height: 100%;
+    margin: 0;
+    animation: fadeIn 0.8s ease-out;
+}
+
+.navbar .left {
+    animation-delay: 0.1s;
+}
+
+.navbar .right {
+    animation-delay: 0.3s;
 }
 
 .navbar .left .icon,
 .navbar .right .icon {
     object-fit: contain;
     border-radius: 50%;
-    max-height: inherit;
-    transition: transform 0.2s ease-in-out;
+    height: 45px;
+    width: 45px;
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 
 .navbar .left p {
-    font-size: 30px;
-    font-weight: 400;
+    font-size: 24px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+
+.navbar .left .f {
+    color: var(--dark-blue);
+}
+
+.navbar .left .w {
+    color: var(--primary-blue);
+}
+
+.navbar .left:hover .icon {
+    transform: rotate(5deg) scale(1.1);
 }
 
 .navbar .center {
     display: flex;
-    flex-direction: row;
-    gap: 25px;
+    align-items: center;
+    gap: 30px;
+    height: 100%;
+    animation: fadeIn 0.8s ease-out;
+    animation-delay: 0.2s;
 }
 
 .navbar .right {
-    gap: 15px;
-    max-height: 45px;
+    gap: 20px;
+    height: 100%;
 }
 
 .navbar .right .sign {
     display: flex;
     flex-direction: row;
-    gap: 10px;
+    gap: 15px;
     align-items: center;
     justify-content: center;
 }
 
 /* Button styling for signup and login */
-.navbar .right .sign {
-    display: flex;
-    flex-direction: row;
-    gap: 15px;
-    align-items: center;
-    justify-content: center;
-}
-
 .navbar .sign .btn {
-    padding: 8px 16px;
-    border-radius: 24px;
+    padding: 10px 18px;
+    border-radius: 8px;
     font-weight: 600;
     font-size: 14px;
     letter-spacing: 0.5px;
     text-transform: uppercase;
-    transition: all 0.3s ease;
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
     display: flex;
     align-items: center;
     justify-content: center;
+    text-decoration: none;
+    position: relative;
+    overflow: hidden;
 }
 
 /* Sign Up button - filled style */
 .navbar .sign .signup-btn {
-    background-color: #3dafff;
+    background: linear-gradient(135deg, var(--primary-blue), var(--dark-blue));
     color: white;
-    border: 2px solid #3dafff;
-    box-shadow: 0 2px 4px rgba(61, 175, 255, 0.2);
+    border: none;
+    box-shadow: 0 4px 10px rgba(46, 156, 253, 0.3);
+}
+
+.navbar .sign .signup-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.2);
+    transition: transform 0.6s ease;
+    transform: skewX(-15deg);
 }
 
 .navbar .sign .signup-btn:hover {
-    background-color: #2a9aee;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(61, 175, 255, 0.3);
+    transform: translateY(-3px);
+    box-shadow: 0 8px 15px rgba(46, 156, 253, 0.4);
+}
+
+.navbar .sign .signup-btn:hover::before {
+    transform: translateX(200%) skewX(-15deg);
 }
 
 /* Login button - outline style */
 .navbar .sign .login-btn {
     background-color: transparent;
-    color: #3dafff;
-    border: 2px solid #3dafff;
+    color: var(--primary-blue);
+    border: 2px solid var(--primary-blue);
+    position: relative;
+    z-index: 1;
+}
+
+.navbar .sign .login-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: var(--primary-blue);
+    transform: scaleX(0);
+    transform-origin: right;
+    transition: transform 0.4s ease;
+    z-index: -1;
 }
 
 .navbar .sign .login-btn:hover {
-    background-color: rgba(61, 175, 255, 0.1);
-    transform: translateY(-2px);
-    box-shadow: 0 2px 4px rgba(61, 175, 255, 0.1);
+    color: white;
+    transform: translateY(-3px);
+    box-shadow: 0 4px 10px rgba(46, 156, 253, 0.2);
 }
 
-.navbar .right .sign .vr {
-    height: 30px;
-    border: 1px solid black;
+.navbar .sign .login-btn:hover::before {
+    transform: scaleX(1);
+    transform-origin: left;
 }
 
 .navbar .right .icon:hover {
     transform: scale(1.1);
+    box-shadow: 0 4px 8px rgba(46, 156, 253, 0.2);
 }
 
 .navbar a {
@@ -116,136 +183,140 @@
     color: inherit;
 }
 
-/* Hover effect for SIGN UP and LOG IN links */
-.navbar .right .sign h3 {
+/* Navigation menu items */
+.navbar .center h4 {
+    margin: 0;
     position: relative;
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--text-dark);
     transition: all 0.3s ease;
+    height: 100%;
+    display: flex;
+    align-items: center;
 }
 
-.navbar .right .sign h3:hover {
-    transform: translateY(-2px);
-    color: #3dafff;
+.navbar .center h4 a {
+    padding: 0 5px;
+    height: 100%;
+    display: flex;
+    align-items: center;
 }
 
-/* Underline animation effect */
-.navbar .right .sign h3 a::after {
+.navbar .center h4::after {
     content: '';
     position: absolute;
-    width: 0;
-    height: 2px;
-    bottom: -2px;
+    bottom: 0;
     left: 0;
-    background-color: #3dafff;
-    transition: width 0.3s ease;
-}
-
-.navbar .right .sign h3:hover a::after {
     width: 100%;
-}
-
-h4 {
-    margin: 0px;
-}
-
-/* Hover effect for SIGN UP and LOG IN links */
-.navbar .center h4 {
-    position: relative;
-    transition: all 0.3s ease;
+    height: 3px;
+    background-color: var(--primary-blue);
+    transform: scaleX(0);
+    transform-origin: center;
+    transition: transform 0.3s ease;
 }
 
 .navbar .center h4:hover {
-    transform: translateY(-2px);
-    color: #3dafff;
+    color: var(--primary-blue);
 }
 
-/* Underline animation effect */
-.navbar .center h4 a::after {
-    content: '';
-    position: absolute;
-    width: 0;
-    height: 2px;
-    bottom: -2px;
-    left: 0;
-    background-color: #3dafff;
-    transition: width 0.3s ease;
-}
-
-.navbar .center h4:hover a::after {
-    width: 100%;
-}
-
-/* Add responsive styles for the center navbar section */
-@media screen and (max-width: 768px) {
-    .navbar {
-        flex-wrap: wrap;
-    }
-
-    .navbar .left .icon {
-        object-fit: contain;
-        width: 50px;
-    }
-
-    .navbar .left .f,
-    .navbar .left .w {
-        margin: 0px;
-        font-size: 20px;
-    } 
-    
-    .navbar .center {
-        order: 3;
-        width: 100%;
-        justify-content: center;
-        gap: 15px;
-    }
-    
-    .navbar .left, 
-    .navbar .right {
-        margin: 5px 10px;
-    }
+.navbar .center h4:hover::after {
+    transform: scaleX(1);
 }
 
 /* Mobile menu icon styling */
 .mobile-menu-icon {
     display: none;
     cursor: pointer;
-    box-sizing: border-box;
     padding: 10px;
+    animation: fadeIn 0.8s ease-out;
+    animation-delay: 0.2s;
 }
 
 .mobile-menu-icon .icon {
     width: 30px;
     height: 30px;
-    transition: transform 0.2s ease-in-out;
+    transition: transform 0.3s ease;
 }
 
 .mobile-menu-icon:hover .icon {
-    transform: scale(1.1);
+    transform: rotate(90deg);
 }
 
 /* Dropdown menu styling */
 .mobile-dropdown {
-    background-color: #e9e9e9;
+    background-color: white;
     z-index: 98;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    box-shadow: var(--shadow);
+    animation: growDown 0.4s ease-out forwards;
+    transform-origin: top center;
+    border-bottom-left-radius: 8px;
+    border-bottom-right-radius: 8px;
+    overflow: hidden;
+    border: 1px solid rgba(46, 156, 253, 0.1);
+    border-top: none;
 }
 
 .mobile-dropdown h4 {
     padding: 15px 20px;
-    border-bottom: 1px solid #d0d0d0;
-    transition: background-color 0.2s ease;
+    margin: 0;
+    border-bottom: 1px solid rgba(46, 156, 253, 0.1);
+    transition: all 0.3s ease;
+    font-weight: 500;
 }
 
 .mobile-dropdown h4 a {
     text-decoration: none;
-    color: inherit;
+    color: var(--text-dark);
+    display: block;
+    width: 100%;
 }
 
 .mobile-dropdown h4:hover {
-    background-color: #d9d9d9;
+    background-color: var(--light-blue);
+    padding-left: 25px;
+    color: var(--primary-blue);
+}
+
+.mobile-dropdown h4:last-child {
+    border-bottom: none;
+}
+
+/* Animation keyframes */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideDown {
+    from {
+        transform: translateY(-100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+@keyframes growDown {
+    from {
+        transform: scaleY(0);
+        opacity: 0;
+    }
+    to {
+        transform: scaleY(1);
+        opacity: 1;
+    }
 }
 
 /* Media query for mobile view */
 @media screen and (max-width: 768px) {
+    .navbar {
+        height: 60px;
+        padding: 0 15px;
+    }
+    
     .mobile-menu-icon {
         display: block;
         order: 2;
@@ -256,25 +327,42 @@ h4 {
     }
     
     .navbar .sign .btn {
-        padding: 6px 12px;
+        padding: 8px 14px;
         font-size: 12px;
+    }
+    
+    .navbar .left p {
+        font-size: 20px;
+    }
+    
+    .navbar .left .icon,
+    .navbar .right .icon {
+        height: 40px;
+        width: 40px;
     }
 }
 
 @media screen and (max-width: 480px) {
-    .navbar .center {
-        gap: 10px;
-    }
-    
-    .navbar .center h4 {
-        font-size: 14px;
-    }
-    
-    .navbar .right .sign {
-        gap: 8px;
+    .navbar {
+        padding: 0 10px;
     }
     
     .navbar .sign .btn {
-        padding: 5px 10px;
+        padding: 6px 12px;
+        font-size: 11px;
+    }
+    
+    .navbar .right .sign {
+        gap: 10px;
+    }
+    
+    .navbar .left p {
+        font-size: 18px;
+    }
+    
+    .navbar .left .icon,
+    .navbar .right .icon {
+        height: 35px;
+        width: 35px;
     }
 }

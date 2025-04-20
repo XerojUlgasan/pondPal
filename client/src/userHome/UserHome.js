@@ -150,6 +150,13 @@ const UserHome = () => {
         if(item === 'logout') {
             auth.signOut()
         }
+
+        if(item === 'analysis'){
+            console.log('annalysis clicked', userInfo)
+            if(userInfo?.devices.length === 0) {
+                toast.error('You have no devices yet.', {position: 'bottom-center', pauseOnHover: false, autoClose: 2000})
+            }
+        }
     };
 
     const handleManageDevice = (e) => {
@@ -363,10 +370,6 @@ const UserHome = () => {
 
     // Generate sample data based on selected sensor
     const generateData = async () => {
-        if(!userInfo?.devices) {
-            toast.error('You have no devices yet.', {position: 'bottom-center', pauseOnHover: false, autoClose: 2000})
-            return
-        }
 
         const data = [];
 
@@ -763,6 +766,7 @@ const UserHome = () => {
                                                 onClick={(e) => handleManageDevice(e)}>
                                             Manage
                                         </button>
+
                                         <button className='action-btn delete-btn'
                                                 data-value={device.devId}
                                                 onClick={async (e) => {
@@ -786,6 +790,7 @@ const UserHome = () => {
                                                                             })
                                                     })
                                                     .then(() => {
+                                                        setSelectedDevice('')
                                                         toast.success('Device Removed', {position: 'top-center', autoClose: 2000, pauseOnHover: false})
                                                     })
                                                     .catch(e => {

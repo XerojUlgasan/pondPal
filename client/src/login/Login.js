@@ -142,9 +142,6 @@ const Login = () => {
     return (
         <div className='login'>
             <form action='/userhome' onSubmit={formSubmit}>
-                <img 
-                src={logoimg} 
-                className='logo'/>
 
                 <label 
                 className='ewan'>Login</label>
@@ -171,7 +168,8 @@ const Login = () => {
                 type='submit' 
                 className='submit'>Login</button> <br/>
 
-                <label>Don't have an account yet? <Link to='/register'>Click here to Sign Up</Link></label>
+                <label>Don't have an account yet?<br/><Link to='/register'>Click here to Sign Up</Link></label>
+                <label>Or</label>
                 <label onClick={() => handleGooglePopUp()}><a>Continue With Google</a></label>
             </form>
         </div>

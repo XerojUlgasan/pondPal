@@ -1,45 +1,99 @@
-/* Base styles that apply to all screen sizes */
+/* Base styles with modern animations */
+:root {
+  --primary-blue: #2e9cfd;
+  --dark-blue: #273f5c;
+  --light-blue: #f0f8ff;
+  --background: #f9fafc;
+  --text-dark: #333;
+  --text-light: #555;
+  --shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+  --input-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+  --animation-duration: 0.5s;
+}
+
 .register {
     display: flex;
     justify-content: center;
     width: 100%;
+    background: linear-gradient(135deg, #f5f7fa, #ebf0f6);
+    min-height: 100vh;
 }
 
 .register * {
-    font-family: "Bebas Neue", serif;
-    font-weight: 400;
-    font-style: normal;
+    font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
     box-sizing: border-box;
 }
 
 .register form {
     height: auto;
-    min-height: calc(100vh - 60px);
+    min-height: calc(100vh - 70px);
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
     width: 100%;
-    padding: 20px 10px 20px 10px;
+    max-width: 1200px;
     position: relative;
+    animation: fadeIn 0.8s ease-out;
+    box-sizing: border-box !important;
 }
 
 .info-cont .title {
-    font-size: 40px;
-    color: black;
+    font-size: 36px;
+    color: var(--dark-blue);
+    font-weight: 700;
+    margin-bottom: 25px;
+    position: relative;
+    padding-bottom: 10px;
+    animation: fadeInDown var(--animation-duration) ease-out;
+}
+
+.info-cont .title::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 60px;
+    height: 3px;
+    background-color: var(--primary-blue);
+    transition: width 0.3s ease;
+}
+
+.info-cont:hover .title::after {
+    width: 80px;
 }
 
 .register form .info-cont {
-    background-color: #efeeec;
-    width: fit-content;
+    background-color: white;
     display: flex;
     flex-direction: column;
     justify-content: flex-start;
     align-items: center;
     height: auto;
-    margin: 10px;
-    padding: 20px;
-    border-radius: 20px;
+    margin: 15px;
+    padding: 30px 25px;
+    border-radius: 16px;
+    box-shadow: var(--shadow);
+    transform: translateY(20px);
+    opacity: 0;
+    animation: fadeInUp var(--animation-duration) ease-out forwards;
+    border: 1px solid rgba(46, 156, 253, 0.08);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    box-sizing: border-box;
+}
+
+.register form .info-cont:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 15px 30px rgba(0, 0, 0, 0.12);
+}
+
+.register form .acc-info {
+    animation-delay: 0.1s;
+}
+
+.register form .user-info {
+    animation-delay: 0.3s;
 }
 
 .register form .info-cont .cont {
@@ -48,7 +102,7 @@
     flex-wrap: wrap;
     width: 100%;
     height: 80%;
-    column-gap: 10px;
+    column-gap: 20px;
     justify-content: baseline;
     align-items: center;
 }
@@ -56,9 +110,11 @@
 .register form .info-cont .input-group {
     display: flex;
     flex-direction: column;
-    align-items: center;
-    width: 50%;
-    margin-bottom: 15px;
+    align-items: flex-start;
+    width: 100%;
+    margin-bottom: 20px;
+    animation: fadeIn 0.5s ease-out;
+    position: relative;
 }
 
 .register form .acc-info .input-group {
@@ -66,67 +122,94 @@
 }
 
 .register form .acc-info {
-    width: 30%;
+    width: 450px;
     height: auto;
 }
 
 .register form .user-info {
-    width: 50%;
-    height: 70%;
+    width: 650px;
+    height: auto;
 }
 
 .register form .submit-cont {
-    /* position: absolute;
-    bottom: 50px;
-    height: fit-content;
+    margin-top: 30px;
     display: flex;
     justify-content: center;
-    width: 80%;
-    justify-content: end; */
+    width: 100%;
+    opacity: 0;
+    animation: fadeInUp 0.6s ease-out forwards;
+    animation-delay: 0.5s;
 }
 
 .register form .submit-cont .submit-btn {
     border-style: none;
-    height: 50px;
-    width: 150px;
-    background-color: #2e9cfd;
+    height: 54px;
+    width: 180px;
+    background: linear-gradient(135deg, var(--primary-blue), var(--dark-blue));
     color: white;
     font-size: 20px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
     cursor: pointer;
     transition: all 0.3s ease;
-    border-radius: 5px;
+    border-radius: 8px;
+    box-shadow: 0 4px 10px rgba(46, 156, 253, 0.3);
+    position: relative;
+    overflow: hidden;
+}
+
+.register form .submit-cont .submit-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.2);
+    transition: transform 0.6s ease;
+    transform: skewX(-15deg);
 }
 
 .register form .submit-cont .submit-btn:hover {
-    background-color: #1281e8;
-    transform: scale(1.05);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    transform: translateY(-3px);
+    box-shadow: 0 8px 15px rgba(46, 156, 253, 0.4);
+}
+
+.register form .submit-cont .submit-btn:hover::before {
+    transform: translateX(200%) skewX(-15deg);
 }
 
 .register form label {
-    margin-top: 15px;
-    font-size: 20px;
-    color: #1281e8;
+    margin-bottom: 8px;
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--text-dark);
+    transition: color 0.3s ease;
+}
+
+.register form .input-group:hover label {
+    color: var(--primary-blue);
 }
 
 .register form input {
     text-align: center;
-    border-style: none;
-    height: 32px;
+    border: 1px solid rgba(0,0,0,0.1);
+    height: 46px;
     width: 100%;
-    max-width: 300px;
-    border-radius: 10px;
+    border-radius: 8px;
     transition: all 0.3s ease;
-    margin-top: 5px;
+    font-size: 15px;
+    padding: 0 15px;
+    box-shadow: var(--input-shadow);
 }
 
 .register form input:focus {
     outline: none;
-    border: 2px solid #1281e8;
-    box-shadow: 0 0 5px rgba(18, 129, 232, 0.5);
+    border: 2px solid var(--primary-blue);
+    box-shadow: 0 0 0 3px rgba(46, 156, 253, 0.15);
 }
 
-/* Add to your Register.css */
+/* Password field styling */
 .password-field {
     position: relative;
     width: 100%;
@@ -137,15 +220,17 @@
 
 .password-tooltip {
     position: absolute;
-    top: 40px;
-    width: 240px;
-    background-color: #f9f9f9;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-    padding: 10px;
+    top: 50px;
+    right: 0;
+    width: 280px;
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+    padding: 15px;
     display: none;
     z-index: 100;
+    border: 1px solid rgba(46, 156, 253, 0.2);
+    animation: fadeIn 0.3s ease-out;
 }
 
 .password-tooltip.show {
@@ -154,9 +239,10 @@
 
 .tooltip-content h4 {
     margin-top: 0;
-    margin-bottom: 8px;
-    font-size: 14px;
-    color: #333;
+    margin-bottom: 10px;
+    font-size: 15px;
+    color: var(--dark-blue);
+    font-weight: 600;
 }
 
 .tooltip-content ul {
@@ -166,20 +252,21 @@
 }
 
 .tooltip-content li {
-    margin-bottom: 4px;
-    font-size: 12px;
+    margin-bottom: 8px;
+    font-size: 14px;
     line-height: 1.4;
+    display: flex;
+    align-items: center;
 }
 
 .tooltip-content .valid {
     color: #2e7d32;
+    font-weight: 500;
 }
 
 .tooltip-content .invalid {
     color: #757575;
 }
-
-/* Add this to your Register.css file */
 
 .password-input-container {
     position: relative;
@@ -192,11 +279,12 @@
 .password-input-container .inputs {
     box-sizing: border-box;
     width: 100%;
+    padding-right: 40px;
 }
 
 .toggle-password {
     position: absolute;
-    right: 5%;
+    right: 15px;
     top: 50%;
     transform: translateY(-50%);
     background: none;
@@ -205,79 +293,92 @@
     font-size: 16px;
     color: #666;
     z-index: 10;
+    transition: all 0.3s ease;
 }
 
 .toggle-password:hover {
-    color: #333;
+    color: var(--primary-blue);
 }
 
 .toggle-password:focus {
     outline: none;
 }
 
+/* Password match indicator */
+p.valid, p.invalid {
+    margin: 5px 0 0;
+    font-size: 14px;
+    transition: all 0.3s ease;
+}
+
+p.valid {
+    color: #2e7d32;
+}
+
+p.invalid {
+    color: #d32f2f;
+}
+
+/* Animation keyframes */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes fadeInDown {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
 
 /* Media Queries */
 /* For tablets and smaller desktop screens */
 @media screen and (max-width: 1024px) {
     .register form .acc-info {
-        width: 35%;
+        width: 400px;
     }
     
     .register form .user-info {
-        width: 55%;
+        width: 600px;
     }
     
     .info-cont .title {
-        font-size: 36px;
+        font-size: 32px;
     }
-
-    /* .register form .submit-cont {
-        width: 90%;
-    } */
 }
 
 /* For mobile devices */
 @media screen and (max-width: 768px) {
     .register form {
         flex-direction: column;
-        padding-bottom: 100px;
+        padding: 30px 15px 80px;
     }
     
     .register form .acc-info,
     .register form .user-info {
         width: 90%;
-        margin: 10px 0;
+        margin: 15px 0;
     }
     
     .register form .info-cont .cont {
         max-height: none;
         flex-wrap: nowrap;
-    }
-
-    .register form .info-cont .input-group{
-        width: 100%;
-    }
-    
-    .info-cont .title {
-        font-size: 32px;
-    }
-    
-    .register form label {
-        font-size: 18px;
-    }
-    
-    /* .register form .submit-cont {
-        justify-content: center;
-        position: static;
-    } */
-}
-
-/* For very small screens */
-@media screen and (max-width: 480px) {
-    .register form .acc-info,
-    .register form .user-info {
-        width: 95%;
-        padding: 15px;
     }
 
     .register form .info-cont .input-group{
@@ -292,7 +393,40 @@
         font-size: 16px;
     }
     
+    .register form .submit-cont {
+        justify-content: center;
+        width: 100%;
+        margin-top: 20px;
+    }
+}
+
+/* For very small screens */
+@media screen and (max-width: 480px) {
+    .register form .acc-info,
+    .register form .user-info {
+        width: 100%;
+        padding: 20px 15px;
+    }
+
+    .register form .info-cont .input-group{
+        width: 100%;
+    }
+    
+    .info-cont .title {
+        font-size: 26px;
+    }
+    
+    .register form label {
+        font-size: 15px;
+    }
+    
     .register form input {
-        max-width: 90%;
+        height: 42px;
+        font-size: 14px;
+    }
+    
+    .password-tooltip {
+        width: 240px;
+        right: -20px;
     }
 }

@@ -6,7 +6,7 @@
 .userHome .sidebar {
     width: 15%;
     min-width: 200px;
-    height: calc(100vh - 60px);
+    height: calc(100vh - 70px);
     background-color: #2e9cfd;
     display: flex;
     flex-direction: column;
@@ -15,7 +15,7 @@
     box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
 
     position: sticky;
-    top: 60px;
+    top: 70px;
 
     z-index: 100;
 }

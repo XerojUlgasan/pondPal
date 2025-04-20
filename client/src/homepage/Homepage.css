@@ -1,212 +1,335 @@
+/* Modern Homepage with Animations */
+:root {
+  --primary-blue: #2e9cfd;
+  --dark-blue: #273f5c;
+  --light-blue: #f0f8ff;
+  --blue-glow: rgba(61, 175, 255, 0.4);
+  --white: #ffffff;
+  --animation-duration: 0.8s;
+}
+
+/* Base layout */
 .homepage {
-    display: flex;
-    flex-direction: row;
+  display: flex;
+  flex-direction: row;
+  height: calc(100vh - 70px);
+  overflow: hidden;
 }
 
 .homepage .left, .homepage .right {
-    height: calc(100vh - 60px);
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
 } 
 
+/* Left panel styling */
 .homepage .left {
-    width: 60%;
-    display: flex;
-    flex-direction: column;
-    background-color: white;
+  width: 60%;
+  background-color: var(--white);
+  position: relative;
+  animation: slideInLeft var(--animation-duration) ease-out;
+}
+
+.homepage .left::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  height: 100%;
+  width: 20%;
+  background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(61,175,255,0.1) 100%);
+  pointer-events: none;
 }
 
 .compname {
-    display: flex;
-    flex-wrap: wrap;
-    flex-direction: column;
-    width: 60%;
-    position: relative;
-    top: 30%;
-    left: 10%;
+  display: flex;
+  flex-wrap: wrap;
+  flex-direction: column;
+  width: 60%;
+  position: relative;
+  top: 30%;
+  left: 10%;
+  animation: fadeInUp 1s ease-out forwards;
 }
 
 .compname .lamao {
-    display: flex;
-    flex-direction: row;
+  display: flex;
+  flex-direction: row;
 }
 
 .left .compname .lamao .f, .left .compname .lamao .w {
-    font-size: 100px;
-    display: block;
+  font-size: 100px;
+  display: block;
+  position: relative;
+}
+
+.left .compname .lamao .f {
+  color: var(--dark-blue);
+  animation: fadeInUp 0.8s ease-out forwards;
+  animation-delay: 0.2s;
+  opacity: 0;
+}
+
+.left .compname .lamao .w {
+  color: var(--primary-blue);
+  animation: fadeInUp 0.8s ease-out forwards, pulseGlow 3s infinite alternate;
+  animation-delay: 0.4s;
+  opacity: 0;
 }
 
 .left .compname h3 {
-    margin-top: -20px;
-    font-weight: 400;
+  margin-top: -10px;
+  margin-left: 5px;
+  font-weight: 400;
+  color: #555;
+  opacity: 0;
+  animation: fadeInUp 0.8s ease-out forwards;
+  animation-delay: 0.6s;
 }
 
+/* Right panel styling */
 .homepage .right {
-    background-color: #3dafff;
-    width: 40%;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    color: white;
+  background: linear-gradient(135deg, var(--primary-blue), var(--dark-blue));
+  width: 40%;
+  justify-content: center;
+  align-items: center;
+  color: var(--white);
+  position: relative;
+  overflow: hidden;
+  animation: slideInRight var(--animation-duration) ease-out;
+}
+
+.homepage .right::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 70%);
+  animation: rotateGlow 15s infinite linear;
+  pointer-events: none;
 }
 
 .homepage .right h1 {
-    width: 80%;
-    font-size: 80px;
-    text-align: right;
-    position: relative;
-    right: 10%;
+  width: 80%;
+  font-size: 80px;
+  text-align: right;
+  position: relative;
+  right: 10%;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+  opacity: 0;
+  animation: fadeInUp 0.8s ease-out forwards;
+  animation-delay: 0.6s;
 }
 
+/* General text styles */
 h1, h3 {
-    margin: 0px;
-    padding: 0px;
+  margin: 0;
+  padding: 0;
 }
 
-/* Left button (LEARN MORE) */
-.homepage .left button {
-    width: 30%;
-    height: 50px;
-    background-color: #3dafff;
-    border: none;
-    color: white;
-    font-size: 20px;
-    position: relative;
-    top: 50%;
-    left: 60%;
-    cursor: pointer;
-    transition: all 0.3s ease;
-}
-
-.homepage .left button:hover {
-    transform: scale(1.05);
-    background-color: #2b9ce6;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-}
-
-/* Right button (SIGN IN) */
+/* Button styles */
 .homepage .right button {
-    width: 30%;
-    height: 50px;
-    border-style: none;
-    background-color: white;
-    color: #3dafff;
-    font-size: 20px;
-    position: relative;
-    top: 10%;
-    cursor: pointer;
-    transition: all 0.3s ease;
+  width: 30%;
+  height: 50px;
+  border: none;
+  border-radius: 8px;
+  background-color: var(--white);
+  color: var(--primary-blue);
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  margin-top: 40px;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  position: relative;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  opacity: 0;
+  animation: fadeInUp 0.8s ease-out forwards;
+  animation-delay: 0.8s;
+  overflow: hidden;
+}
+
+.homepage .right button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.2);
+  transition: transform 0.6s ease;
+  transform: skewX(-15deg);
 }
 
 .homepage .right button:hover {
-    transform: scale(1.05);
-    background-color: #f0f8ff;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  transform: translateY(-5px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+  background-color: #f0f8ff;
+  color: var(--dark-blue);
+}
+
+.homepage .right button:hover::before {
+  transform: translateX(200%) skewX(-15deg);
 }
 
 .homepage .right a {
-    text-decoration: none;
-    color: inherit;
+  text-decoration: none;
+  color: inherit;
+  display: block;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Animation keyframes */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideInLeft {
+  from {
+    transform: translateX(-50px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(50px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes pulseGlow {
+  0% {
+    text-shadow: 0 0 8px rgba(46, 156, 253, 0);
+  }
+  100% {
+    text-shadow: 0 0 15px rgba(46, 156, 253, 0.7);
+  }
+}
+
+@keyframes rotateGlow {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 
 /* Media queries for responsive design */
 @media screen and (max-width: 1200px) {
-    .left .compname .f, .left .compname .w {
-        font-size: 80px;
-    }
-    
-    .homepage .right h1 {
-        font-size: 60px;
-    }
-    
-    .homepage .left button,
-    .homepage .right button {
-        width: 40%;
-    }
+  .left .compname .lamao .f, .left .compname .lamao .w {
+    font-size: 80px;
+  }
+  
+  .homepage .right h1 {
+    font-size: 60px;
+  }
+  
+  .homepage .right button {
+    width: 40%;
+  }
 }
 
 @media screen and (max-width: 768px) {
-    .homepage {
-        flex-direction: column;
-    }
-    
-    .homepage .left, .homepage .right {
-        width: 100%;
-        height: 50vh;
-    }
-    
-    .compname {
-        top: 20%;
-        width: 80%;
-    }
-    
-    .left .compname .f, .left .compname .w {
-        font-size: 60px;
-    }
-    
-    .left .compname h3 {
-        font-size: 16px;
-        margin-top: 5px;
-    }
-    
-    .homepage .right h1 {
-        font-size: 50px;
-        text-align: center;
-        right: 0;
-    }
-    
-    .homepage .left button {
-        width: 50%;
-        top: 30%;
-        left: 10%;
-    }
-    
-    .homepage .right button {
-        width: 50%;
-        top: 5%;
-    }
+  .homepage {
+    flex-direction: column;
+  }
+  
+  .homepage .left, .homepage .right {
+    width: 100%;
+    height: 50vh;
+    animation: fadeIn var(--animation-duration) ease-out;
+  }
+  
+  .homepage .left::after {
+    display: none;
+  }
+  
+  .compname {
+    top: 20%;
+    width: 80%;
+  }
+  
+  .left .compname .lamao .f, .left .compname .lamao .w {
+    font-size: 60px;
+  }
+  
+  .left .compname h3 {
+    font-size: 16px;
+    margin-top: 5px;
+  }
+  
+  .homepage .right h1 {
+    font-size: 50px;
+    text-align: center;
+    right: 0;
+  }
+  
+  .homepage .right button {
+    width: 50%;
+    margin-top: 20px;
+  }
 }
 
 @media screen and (max-width: 480px) {
-    .homepage .left, .homepage .right {
-        height: calc(50vh - 30px);
-    }
-    
-    .compname {
-        top: 15%;
-    }
-    
-    .left .compname .f, .left .compname .w {
-        font-size: 40px;
-    }
-    
-    .homepage .right h1 {
-        font-size: 36px;
-    }
-    
-    .homepage .left button,
-    .homepage .right button {
-        width: 70%;
-        font-size: 16px;
-        height: 40px;
-    }
-    
-    .homepage .left button {
-        top: 25%;
-    }
+  .homepage .left, .homepage .right {
+    height: 50vh;
+  }
+  
+  .compname {
+    top: 15%;
+  }
+  
+  .left .compname .lamao .f, .left .compname .lamao .w {
+    font-size: 40px;
+  }
+  
+  .homepage .right h1 {
+    font-size: 36px;
+  }
+  
+  .homepage .right button {
+    width: 70%;
+    font-size: 16px;
+    height: 40px;
+  }
 }
 
 /* For very small screens */
 @media screen and (max-width: 320px) {
-    .left .compname .f, .left .compname .w {
-        font-size: 32px;
-    }
-    
-    .left .compname h3 {
-        font-size: 14px;
-        margin-top: 5px;
-    }
-    
-    .homepage .right h1 {
-        font-size: 28px;
-    }
+  .left .compname .lamao .f, .left .compname .lamao .w {
+    font-size: 32px;
+  }
+  
+  .left .compname h3 {
+    font-size: 14px;
+    margin-top: 5px;
+  }
+  
+  .homepage .right h1 {
+    font-size: 28px;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
 }
