@@ -5,6 +5,8 @@ import temp from './tempt.webp'
 import turbidity from './turbidity.webp'
 import water from './water.webp'
 import pond from './Pond.jpg'
+import warning from './warning.png'
+import software from './software.png'
 
 const LearnMore = () => {
     return (
@@ -136,6 +138,33 @@ const LearnMore = () => {
                         <div className="feature-content">
                             <b>Power Supply</b> 
                             <span>The system requires a stable power supply to function effectively.</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <section className="section compliance-section">
+                <div className="feature-box">
+                    <h2>Compliance and Evaluation Standards</h2>
+                    <p>To ensure quality and performance, PondPal is designed and evaluated based on the following standards:</p>
+                    
+                    <div className="feature-item animate-in">
+                        <div className="circle">
+                            <img src={warning} alt="Risk management" className="circle-icon" />
+                        </div>
+                        <div className="feature-content">
+                            <b>ISO 31000</b>
+                            <span>Risk Management: Ensures proactive identification and control of potential risks.</span>
+                        </div>
+                    </div>
+                    
+                    <div className="feature-item animate-in delay-1">
+                        <div className="circle">
+                            <img src={software} alt="Software quality" className="circle-icon" />
+                        </div>
+                        <div className="feature-content">
+                            <b>ISO 25010</b>
+                            <span>Software Quality: Focuses on Functionality, Reliability, and Usability to guarantee user satisfaction and system integrity.</span>
                         </div>
                     </div>
                 </div>

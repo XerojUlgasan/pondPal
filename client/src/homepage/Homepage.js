@@ -1,7 +1,8 @@
 import "./Homepage.css"
-import { auth } from "../firebaseConfig.js"
+import { auth, database } from "../firebaseConfig.js"
 import { Link, useNavigate } from "react-router-dom"
 import { useEffect } from "react"
+import { get, ref } from "firebase/database"
 
 const Homepage = () => {
     const navigate = useNavigate()

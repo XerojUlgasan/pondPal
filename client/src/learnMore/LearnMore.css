@@ -362,3 +362,140 @@
       height: 30px;
     }
   }
+
+.compliance-section {
+    padding: 40px 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    padding: 25px;
+}
+
+.compliance-section .desc {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.compliance-box {
+    background-color: #dbeafe !important;
+    padding: 20px;
+    border-radius: 10px;
+    margin: 20px 0;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    opacity: 0;
+    transform: translateY(20px);
+    box-sizing: border-box;
+}
+
+.compliance-content {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.compliance-content b {
+    font-size: 1.2rem;
+    color: #2563eb;
+}
+
+.compliance-content p {
+    margin: 0;
+    line-height: 1.5;
+}
+
+.number-icon {
+    width: 40px;
+    height: 40px;
+    margin-right: 15px;
+}
+
+/* Animation classes */
+.animate-in {
+    animation: fadeInUp 0.7s ease-out forwards;
+}
+
+.delay-1 {
+    animation-delay: 0.3s;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* For better mobile responsiveness */
+@media (max-width: 768px) {
+    .compliance-box .feature-item {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+    }
+    
+    .number-icon {
+        margin-right: 0;
+        margin-bottom: 10px;
+    }
+}
+
+/* Add this at the end of your CSS file */
+
+.compliance-section {
+    display: flex;
+    justify-content: center;
+    padding: 30px;
+}
+
+.compliance-section .feature-box {
+    max-width: 800px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.compliance-section .feature-item {
+    opacity: 0;
+}
+
+.compliance-section .circle {
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+}
+
+.circle-icon {
+    width: 20px;
+    height: 20px;
+    position: relative;
+    z-index: 2;
+}
+
+/* Animation classes with properly scoped selectors */
+.compliance-section .animate-in {
+    animation: fadeInUp 0.7s ease-out forwards;
+}
+
+.compliance-section .delay-1 {
+    animation-delay: 0.3s;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}

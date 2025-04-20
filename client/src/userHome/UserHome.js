@@ -6,10 +6,12 @@ import addIcon from '../images/add.png';
 import analysisIcon from '../images/analysis.png';
 import devicesIcon from '../images/devices.png';
 import logoutIcon from '../images/logout.png'
+import hasNotif from '../images/hasNotif.png'
+import noNotif from '../images/noNotif.png'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { data, UNSAFE_createClientRoutesWithHMRRevalidationOptOut, useNavigate } from 'react-router-dom';
 import {auth, database, fireStoreDb} from '../firebaseConfig';
-import { get, limitToFirst, limitToLast, onValue, orderByChild, push, query, ref, set, update } from 'firebase/database';
+import { Database, get, limitToFirst, limitToLast, onValue, orderByChild, push, query, ref, remove, set, update } from 'firebase/database';
 import { sendEmailVerification } from 'firebase/auth';
 import { arrayRemove, collectionGroup, doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { toast, ToastContainer } from 'react-toastify';
@@ -178,6 +180,55 @@ const UserHome = () => {
         }))
     }
 
+    // Add this state near your other state declarations
+    const [showNotifications, setShowNotifications] = useState(false);
+
+    // Add this helper function for timestamp formatting
+    const formatNotificationTime = (timestamp) => {
+    const date = new Date(timestamp);
+    return date.toLocaleString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true
+    });
+    };
+
+    // Add this helper to determine notification type
+    const getNotificationType = (sensor, sensorVal, min, max) => {
+    if (sensorVal < min || sensorVal > max) {
+        // Critical thresholds - very far from acceptable range
+        const criticalOffset = {
+        ph: 1.0, 
+        temp: 3,
+        tds: 50,
+        turb: 10,
+        watlvl: 15
+        };
+        
+        const offset = criticalOffset[sensor] || 0;
+        
+        if (sensorVal < min - offset || sensorVal > max + offset) {
+        return 'critical';
+        }
+        return 'warning';
+    }
+    return 'info';
+    };
+
+    // Add this function to get sensor unit
+    const getSensorUnit = (sensor) => {
+    switch(sensor) {
+        case 'ph': return '';
+        case 'temp': return '°C';
+        case 'tds': return 'ppm';
+        case 'turb': return 'NTU';
+        case 'watlvl': return '%';
+        default: return '';
+    }
+    };
+
     const insertDeviceToDb = async () => {
 
         if(deviceInfo.deviceId === '' && deviceInfo.deviceName === ''){
@@ -324,6 +375,7 @@ const UserHome = () => {
 
     // Calculate average values based on chartData
     const calculateAverages = () => {
+        if (!userInfo?.devices || userInfo.devices.length === 0) return {};
         if (!Array.isArray(chartData) || chartData.length === 0) return {};
         
         // Match these names to your Firebase data structure
@@ -351,22 +403,36 @@ const UserHome = () => {
     };
 
     useEffect(() => {
-        const fetchData = async () => {
-            try {
-                const data = await generateData();
-                if (Array.isArray(data)) {
-                    setChartData(data);
-                } else {
-                    setChartData([]);
-                }
-            } catch (error) {
-                console.error("Error fetching chart data:", error);
+        if (!userInfo?.devices || userInfo.devices.length === 0) {
+            setChartData([]);
+        }
+    }, [userInfo?.devices]);
+
+    const fetchData = async () => {
+        try {
+            const data = await generateData();
+            if (Array.isArray(data)) {
+                setChartData(data);
+            } else {
                 setChartData([]);
             }
-        };
-        
-        fetchData();
-    }, [selectedSensor, timePeriod, selectedDevice]);
+        } catch (error) {
+            toast.error("Error fetching chart data", {position: 'bottom-center', autoClose: 2000, pauseOnHover: false});
+            setChartData([]);
+        }
+    };
+
+    useEffect(() => {
+        if(activeItem === 'analysis' && userInfo?.devices?.length > 0){
+            fetchData();
+        }
+    }, [selectedSensor, timePeriod, selectedDevice, activeItem, userInfo?.devices?.length]);
+    
+    useEffect(() => {
+        if(userInfo?.devices?.length === 0){
+            toast.error('You currently have no device registered', {position: 'bottom-center', pauseOnHover: false, autoClose: 2000})
+        }
+    }, [selectedSensor, timePeriod, selectedDevice])
 
     // Generate sample data based on selected sensor
     const generateData = async () => {
@@ -379,29 +445,39 @@ const UserHome = () => {
         if(timePeriod === 'daily') {
             const currDate = new Date(Date.now()).toISOString().split('T')[0] // YYYY-MM-DD
             const devRecordRef = ref(database, `/devices/${selectedDevice}/records/${currDate}`)
-            const snapshot = await get(devRecordRef)
+            
+            try{
+                const snapshot = await get(devRecordRef)
 
-            if(snapshot.exists()){
-                const recordData = snapshot.val()
-                Object.keys(recordData).forEach(hour => {
-                    const record = {
-                        date: hour,
-                        ...recordData[hour]
-                    }
-
-                    data.push(record)
-                })
-
-                data.sort((a, b) => {
-                    const timeA = a.date.split(':').map(Number);
-                    const timeB = b.date.split(':').map(Number);
-                    return (timeA[0] * 60 + timeA[1]) - (timeB[0] * 60 + timeB[1]);
-                });
-
-                console.log(data)
-            }else{
-                toast.error('Device has no current record of your chosen date', {position: 'bottom-center', pauseOnHover: false, autoClose: 2000})
-                return
+                if(snapshot.exists()){
+                    const recordData = snapshot.val()
+                    Object.keys(recordData).forEach(hour => {
+                        const record = {
+                            date: hour,
+                            ...recordData[hour]
+                        }
+    
+                        data.push(record)
+                    })
+    
+                    data.sort((a, b) => {
+                        const timeA = a.date.split(':').map(Number);
+                        const timeB = b.date.split(':').map(Number);
+                        return (timeA[0] * 60 + timeA[1]) - (timeB[0] * 60 + timeB[1]);
+                    });
+    
+                    console.log(data)
+                } else{
+                    console.log(`No data for ${currDate}`)
+                    toast.info(`No data found for today (${currDate})`, {
+                        position: 'bottom-center', 
+                        autoClose: 2000,
+                        pauseOnHover: false
+                    })
+                    return []
+                }
+            }catch (error){
+                
             }
         }
 
@@ -526,18 +602,6 @@ const UserHome = () => {
     };
 
     useEffect(() => {
-        // if(!localStorage.getItem("userInfo")) {
-        //     navigate('/')
-        // }
-
-        // if(userInfo.userId === ''){
-        //     setUserInfo(prev => ({
-        //         ...prev,
-        //         ...JSON.parse(localStorage.getItem('userInfo'))
-        //     }))
-        // }else {
-        //     localStorage.setItem('userInfo', JSON.stringify(userInfo))
-        // }
 
         const unsubscribe = auth.onAuthStateChanged(async (user) => {
             if(user){
@@ -555,12 +619,10 @@ const UserHome = () => {
             }
         })
 
-        setChartData(generateData());
-        
         return(() => {{
             unsubscribe()
         }})
-    }, [selectedSensor, timePeriod, selectedDevice]);
+    }, [navigate]);
 
     useEffect(() => {
         const unsubscribes = [];
@@ -619,17 +681,23 @@ const UserHome = () => {
     //For notifications
     useEffect(() => {
         const unsubs = []
+        const MAX_NOTIFICATIONS = 50 // Limit number of notifications to avoid memory issues
+        const deviceNameMap = {}; // Map to store device IDs to names
 
+        // Create a map of current devices for fast lookup
         if(userInfo?.devices) {
             userInfo.devices.forEach(device => {
+                deviceNameMap[device.devId] = device.devName;
+            });
+            
+            userInfo.devices.forEach(device => {
                 const devRef = ref(database, `/devices/${device.devId}/notifications`)
-                // Add limitToLast to restrict query to recent notifications
                 const notifQuery = query(devRef, orderByChild('time'), limitToLast(20))
                 
                 const unsub = onValue(notifQuery, (snapshot) => {
                     if (snapshot.exists()) {
                         const notifData = snapshot.val()
-                        console.log(notifData)
+                        
                         // Convert Firebase object to array
                         const notifArray = Object.keys(notifData).map(key => ({
                             id: key,
@@ -640,12 +708,20 @@ const UserHome = () => {
                         // Sort by time (newest first)
                         notifArray.sort((a, b) => b.time - a.time)
                         
-                        // Update state with sorted notifications
-                        setNotifs(prev => [...notifArray, ...prev.filter(n => 
-                            !notifArray.some(newNotif => newNotif.id === n.id)
-                        )])
-
-                        toast.info('New notification has arrived.', {position: 'top-right', pauseOnHover: false, theme: 'colored'})
+                        // Update state with sorted notifications, limiting the total number
+                        setNotifs(prev => {
+                            // Filter out notifications from devices that are no longer in the user's device list
+                            const validNotifications = prev.filter(n => 
+                                Object.values(deviceNameMap).includes(n.name)
+                            );
+                            
+                            const combinedNotifs = [...notifArray, ...validNotifications.filter(n => 
+                                !notifArray.some(newNotif => newNotif.id === n.id)
+                            )]
+                            
+                            // Return only the most recent notifications to avoid memory issues
+                            return combinedNotifs.slice(0, MAX_NOTIFICATIONS)
+                        })
                     }
                 }, (error) => {
                     console.error(`Error getting notifications for device ${device.devId}:`, error)
@@ -653,6 +729,9 @@ const UserHome = () => {
 
                 unsubs.push(unsub)
             })
+        } else {
+            // If there are no devices, clear all notifications
+            setNotifs([]);
         }
 
         return () => {
@@ -665,15 +744,117 @@ const UserHome = () => {
     }, [notifs])
 
     useEffect(() => {
-        if (userInfo?.devices && userInfo.devices.length > 0 && !selectedDevice) {
-            setSelectedDevice(userInfo.devices[0].devId);
+        if (userInfo?.devices && userInfo.devices.length > 0) {
+            if (!selectedDevice || !userInfo.devices.some(d => d.devId === selectedDevice)) {
+                // If no device is selected or the selected device was removed, select the first one
+                setSelectedDevice(userInfo.devices[0].devId);
+            }
+        } else {
+            // Reset selection if there are no devices
+            setSelectedDevice('');
         }
     }, [userInfo?.devices, selectedDevice]);
+
+    // Add this state for notification filtering
+    const [notificationFilter, setNotificationFilter] = useState('all');
+
+    // Add this handler for notification filter changes
+    const handleNotificationFilterChange = (e) => {
+        setNotificationFilter(e.target.value);
+    };
 
     const averages = calculateAverages();
 
     return (
         <div className="userHome">
+            <div className='above-nav'>
+                <img 
+                  className='notifs' 
+                  src={notifs.length === 0 ? noNotif : hasNotif} 
+                  onClick={() => setShowNotifications(!showNotifications)} 
+                  style={{ cursor: 'pointer' }}
+                />
+                <div className='user-cont'>
+                    <img src={userIcon}/>
+                    <div className='identity-cont'>
+                        {auth.currentUser ? (
+                            <>
+                                <h4>{auth.currentUser.displayName || auth.currentUser.email}</h4>
+                                <h6>{auth.currentUser.displayName ? auth.currentUser.email : ''}</h6>
+                            </>
+                        ) : (
+                            <h4>Loading user...</h4>
+                        )}
+                    </div>
+                </div>
+            </div>
+
+            {/* Add the notification popup */}
+            {showNotifications && (
+              <div className="notification-popup-overlay" onClick={() => setShowNotifications(false)}>
+                <div className="notification-popup" onClick={(e) => e.stopPropagation()}>
+                  <div className="notification-popup-header">
+                    <h3>Notifications</h3>
+                    <button className="close-btn" onClick={() => setShowNotifications(false)}>×</button>
+                  </div>
+                  <div className="notification-popup-content">
+                    {notifs.length === 0 ? (
+                      <div className="empty-notifications">
+                        <p>No notifications yet</p>
+                      </div>
+                    ) : (
+                      notifs.map((notification) => {
+                        const notificationType = getNotificationType(
+                          notification.sensor,
+                          notification.sensorVal,
+                          notification.min,
+                          notification.max
+                        );
+                        
+                        let title = '';
+                        let message = '';
+                        const sensorUnit = getSensorUnit(notification.sensor);
+                        
+                        if (notification.sensorVal < notification.min) {
+                          title = `${notificationType === 'critical' ? 'Critical: ' : 'Warning: '}Low ${getSensorName(notification.sensor)}`;
+                          message = `${getSensorName(notification.sensor)} value ${notification.sensorVal.toFixed(1)}${sensorUnit} is below minimum threshold (${notification.min}${sensorUnit})`;
+                        } else if (notification.sensorVal > notification.max) {
+                          title = `${notificationType === 'critical' ? 'Critical: ' : 'Warning: '}High ${getSensorName(notification.sensor)}`;
+                          message = `${getSensorName(notification.sensor)} value ${notification.sensorVal.toFixed(1)}${sensorUnit} is above maximum threshold (${notification.max}${sensorUnit})`;
+                        } else {
+                          title = `${getSensorName(notification.sensor)} normal range`;
+                          message = `${getSensorName(notification.sensor)} is at ${notification.sensorVal.toFixed(1)}${sensorUnit}, within acceptable range`;
+                        }
+                        
+                        return (
+                          <div key={notification.id} className={`notification-item ${notificationType}`}>
+                            <div className="notification-icon-wrapper">
+                              <div className="notification-icon">
+                                {notificationType === 'info' ? 'i' : '!'}
+                              </div>
+                            </div>
+                            <div className="notification-content">
+                              <div className="notification-top-row">
+                                <span className="notification-title">{title}</span>
+                                <span className="notification-time">{formatNotificationTime(notification.time)}</span>
+                              </div>
+                              <p className="notification-message">{message}</p>
+                              <div className="notification-footer">
+                                <span className="notification-device">{notification.name}</span>
+                                <span className="notification-sensor" style={{ color: getSensorConfig(notification.sensor).color }}>
+                                  {getSensorName(notification.sensor)}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Sidebar */}
             <div className='sidebar'>
                 <div 
@@ -699,111 +880,172 @@ const UserHome = () => {
                 </div>
             </div>
 
-            {/* Opening */}
+            {/* Enhanced Opening/Welcome Page */}
             {(activeItem === '') && (
-                <div className='content'>
-                    <h1 className='title'>
-                        Welcome, Pal!
-                    </h1>
-
-                    <p>
-                    PondPal is your go-to solution for keeping your fish happy and your pond healthy. Our system continuously monitors essential water quality parameters such as pH level, temperature, TDS, turbidity, and water level to ensure a safe and thriving environment for your aquatic life.
-                    Using sensors and real-time data, PondPal alerts you whenever conditions go beyond the threshold so you can act fast and avoid problems like fish stress, disease, or water pollution.
-                    </p>
+                <div className='welcome-container'>
+                    <div className='welcome-header'>
+                        <h1 className='welcome-title'>
+                            Welcome to <span className="highlight">PondPal</span>!
+                        </h1>
+                        <div className="welcome-subtitle">Your Smart Water Monitoring Assistant</div>
+                    </div>
+                    
+                    <div className="welcome-content">
+                        <div className="welcome-card">
+                            <div className="card-icon">
+                                <i className="feature-icon monitoring"></i>
+                            </div>
+                            <h3>Real-Time Monitoring</h3>
+                            <p>PondPal continuously tracks your water quality parameters including pH, temperature, TDS, turbidity, and water level.</p>
+                        </div>
+                        
+                        <div className="welcome-card">
+                            <div className="card-icon">
+                                <i className="feature-icon alerts"></i>
+                            </div>
+                            <h3>Smart Alerts</h3>
+                            <p>Get instant notifications when any parameter falls outside the optimal range, allowing you to take quick action.</p>
+                        </div>
+                        
+                        <div className="welcome-card">
+                            <div className="card-icon">
+                                <i className="feature-icon analytics"></i>
+                            </div>
+                            <h3>Data Analytics</h3>
+                            <p>View detailed charts and analytics to understand trends and make informed decisions for your aquatic environment.</p>
+                        </div>
+                    </div>
+                    
+                    <div className="welcome-footer">
+                        <p className="welcome-description">
+                            PondPal is your go-to solution for keeping your fish happy and your pond healthy. Our system helps you maintain a safe and thriving environment for your aquatic life by monitoring essential water parameters and alerting you to potential issues before they become problems.
+                        </p>
+                        <button className="get-started-btn" onClick={() => handleItemClick('device')}>
+                            Get Started
+                            <span className="arrow-icon">→</span>
+                        </button>
+                    </div>
                 </div>
             )}
             
             {/* view devices */}
             {(activeItem === 'device') && (
                 <div className='devices-container'>
-                    <h2 className='devices-title'>Your Devices</h2>
-                    {/* devices */}
-                    <div className='devices'>
+                    {(!userInfo?.devices || userInfo?.devices.length === 0) ? (
+                        <div className="empty-devices-message">
+                            <h3>No Devices Registered</h3>
+                            <p>Please add a device to monitor your pond conditions.</p>
+                        </div>
+                    ) : (
+                        <>
+                            <h2 className='devices-title'>Your Devices</h2>
+                            <div className='devices'>
+                                {userInfo.devices.map(device => (
+                                    <div className='device-card' key={device?.devId}>
+                                        <div className='device-header'>
+                                            <div className='device-name-section'>
+                                                <h3>{device?.devName}</h3>
+                                                <span className={`device-status ${device?.isOnline ? (device?.isWarning ? 'warning' : 'online') : 'offline'}`}>
+                                                    <span className='status-dot'></span>
+                                                    {device?.isOnline ? (device?.isWarning ? 'Warning' : 'Online') : 'Offline'}
+                                                </span>
+                                            </div>
+                                            <div className='device-icon' data-value={device?.devId} onClick={deviceAnalytics}>
+                                                <img src={analysisIcon} alt="Device icon"/>
+                                            </div>
+                                        </div>
+                                        
+                                        <div className='device-stats'>
+                                            <div className='stat-item'>
+                                                <span className='stat-label'>pH</span>
+                                                <span className='stat-value'>{device.sensors?.ph}</span>
+                                            </div>
+                                            <div className='stat-item'>
+                                                <span className='stat-label'>Temp</span>
+                                                <span className='stat-value'>{device.sensors?.temp}°C</span>
+                                            </div>
+                                            <div className='stat-item'>
+                                                <span className='stat-label'>TDS</span>
+                                                <span className='stat-value'>{device.sensors?.tds}</span>
+                                            </div>
+                                            <div className='stat-item'>
+                                                <span className='stat-label'>Turbidity</span>
+                                                <span className='stat-value'>{device.sensors?.turb}</span>
+                                            </div>
+                                            <div className='stat-item'>
+                                                <span className='stat-label'>Water Level</span>
+                                                <span className='stat-value'>{device.sensors?.watlvl}%</span>
+                                            </div>
+                                        </div>
+                                        
+                                        <div className='device-actions'>
+                                            <button className='action-btn manage-btn' 
+                                                    data-value={device.devId}
+                                                    onClick={(e) => handleManageDevice(e)}>
+                                                Manage
+                                            </button>
 
-                        {userInfo && userInfo?.devices && userInfo?.devices.map(device => {
+                                            <button className='action-btn delete-btn'
+                                                    data-value={device.devId}
+                                                    onClick={async (e) => {
+                                                        try {
+                                                            const devId = e.currentTarget.dataset.value
+                                                            const index = userInfo.devices.findIndex(d => d.devId === devId)
+                                                            
+                                                            if (index === -1) {
+                                                                toast.error('Device not found', {position: 'bottom-center', autoClose: 2000})
+                                                                return
+                                                            }
+                                                            
+                                                            // Store device info before removing from state
+                                                            const deviceToRemove = {
+                                                                devId: userInfo.devices[index].devId,
+                                                                devName: userInfo.devices[index].devName
+                                                            }
+                                                            
+                                                            // Update Firestore first
+                                                            await updateDoc(doc(fireStoreDb, 'users', auth.currentUser.uid), {
+                                                                devices: arrayRemove(deviceToRemove)
+                                                            })
+                                                            
+                                                            //removes user email to device users
+                                                            const snapshot = await get(ref(database, `/devices/${devId}/users`))
+                                                            const users = snapshot.val()
 
-                            return (
-                                <div className='device-card' key={device?.devId}>
-                                    <div className='device-header'>
-                                        <div className='device-name-section'>
-                                            <h3>{device?.devName}</h3>
-                                            <span className={`device-status ${device?.isOnline ? (device?.isWarning ? 'warning' : 'online') : 'offline'}`}>
-                                                <span className='status-dot'></span>
-                                                {device?.isOnline ? (device?.isWarning ? 'Warning' : 'Online') : 'Offline'}
-                                            </span>
-                                        </div>
-                                        <div className='device-icon' data-value={device?.devId} onClick={deviceAnalytics}>
-                                            <img src={analysisIcon} alt="Device icon"/>
-                                        </div>
-                                    </div>
-                                    
-                                    <div className='device-stats'>
-                                        <div className='stat-item'>
-                                            <span className='stat-label'>pH</span>
-                                            <span className='stat-value'>{device.sensors?.ph}</span>
-                                        </div>
-                                        <div className='stat-item'>
-                                            <span className='stat-label'>Temp</span>
-                                            <span className='stat-value'>{device.sensors?.temp}°C</span>
-                                        </div>
-                                        <div className='stat-item'>
-                                            <span className='stat-label'>TDS</span>
-                                            <span className='stat-value'>{device.sensors?.tds}</span>
-                                        </div>
-                                        <div className='stat-item'>
-                                            <span className='stat-label'>Turbidity</span>
-                                            <span className='stat-value'>{device.sensors?.turb}</span>
-                                        </div>
-                                        <div className='stat-item'>
-                                            <span className='stat-label'>Water Level</span>
-                                            <span className='stat-value'>{device.sensors?.watlvl}%</span>
-                                        </div>
-                                    </div>
-                                    
-                                    <div className='device-actions'>
-                                        <button className='action-btn manage-btn' 
-                                                data-value={device.devId}
-                                                onClick={(e) => handleManageDevice(e)}>
-                                            Manage
-                                        </button>
+                                                            for (const uid of Object.keys(users)) {
+                                                                if(users[uid] === auth.currentUser.email){
+                                                                    await remove(ref(database, `/devices/${devId}/users/${uid}`));
+                                                                }
+                                                            }
 
-                                        <button className='action-btn delete-btn'
-                                                data-value={device.devId}
-                                                onClick={async (e) => {
-                                                    const devId = e.currentTarget.dataset.value
-                                                    const index = userInfo.devices.findIndex(d => d.devId === devId)
-
-                                                    setUserInfo(prev => {
-                                                        const newArray = [...prev.devices]
-                                                        newArray.splice(index, 1)
-
-                                                        return {
-                                                            ...prev,
-                                                            devices: newArray
+                                                            // Then update local state
+                                                            setUserInfo(prev => {
+                                                                const newArray = [...prev.devices]
+                                                                newArray.splice(index, 1)
+                                                                return {
+                                                                    ...prev,
+                                                                    devices: newArray
+                                                                }
+                                                            })
+                                                            
+                                                            // ADDED CODE: Clean up notifications for deleted device
+                                                            setNotifs(prev => prev.filter(notif => notif.name !== deviceToRemove.devName))
+                                                            
+                                                            setSelectedDevice('')
+                                                            toast.success('Device Removed', {position: 'top-center', autoClose: 2000, pauseOnHover: false})
+                                                        } catch (error) {
+                                                            console.error('Error removing device:', error)
+                                                            toast.error('Error occurred while removing device', {position: 'bottom-center', autoClose: 2000})
                                                         }
-                                                    })
-                                                    console.log(userInfo.devices)
-                                                    await updateDoc(doc(fireStoreDb, 'users', auth.currentUser.uid), {
-                                                        devices: arrayRemove({
-                                                                                devId: userInfo?.devices[index]?.devId,
-                                                                                devName: userInfo?.devices[index]?.devName
-                                                                            })
-                                                    })
-                                                    .then(() => {
-                                                        setSelectedDevice('')
-                                                        toast.success('Device Removed', {position: 'top-center', autoClose: 2000, pauseOnHover: false})
-                                                    })
-                                                    .catch(e => {
-                                                        toast.error('Error Occured', {position: 'bottom-center', autoClose: 2000, pauseOnHover: false})
-                                                    })
-                                                }}>
-                                            Delete
-                                        </button>
+                                                    }}>
+                                                Delete
+                                            </button>
+                                        </div>
                                     </div>
-                                </div>
-                            )
-                        })}
-                    </div>
+                                ))}
+                            </div>
+                        </>
+                    )}
 
                     {/* add-device*/}
                     <div className='add-cont'>
@@ -913,53 +1155,47 @@ const UserHome = () => {
                                 <div className="popup-actions">
                                     <button className="action-btn delete-btn" onClick={() => setDevicesPopUp('')}>Cancel</button>
                                     <button className="action-btn manage-btn" onClick={async () => {
-                                        // Collect all threshold values from inputs
-                                        const form = document.querySelector('.threshold-form');
-                                        const inputs = form.querySelectorAll('input[type="number"]');
-                                        
-                                        // Create new threshold object
-                                        const newThresholds = {
-                                            ph: { min: 0, max: 0 },
-                                            temp: { min: 0, max: 0 },
-                                            tds: { min: 0, max: 0 },
-                                            turb: { min: 0, max: 0 },
-                                            watlvl: { min: 0, max: 0 }
-                                        };
-                                        
-                                        // pH inputs are at index 0 and 1
-                                        newThresholds.ph.min = parseFloat(inputs[0].value);
-                                        newThresholds.ph.max = parseFloat(inputs[1].value);
-                                        
-                                        // Temperature inputs are at index 2 and 3
-                                        newThresholds.temp.min = parseFloat(inputs[2].value);
-                                        newThresholds.temp.max = parseFloat(inputs[3].value);
-                                        
-                                        // TDS inputs are at index 4 and 5
-                                        newThresholds.tds.min = parseFloat(inputs[4].value);
-                                        newThresholds.tds.max = parseFloat(inputs[5].value);
-                                        
-                                        // Turbidity inputs are at index 6 and 7
-                                        newThresholds.turb.min = parseFloat(inputs[6].value);
-                                        newThresholds.turb.max = parseFloat(inputs[7].value);
-                                        
-                                        // Water Level inputs are at index 8 and 9
-                                        newThresholds.watlvl.min = parseFloat(inputs[8].value);
-                                        newThresholds.watlvl.max = parseFloat(inputs[9].value);
-                                        
-                                        // You can also save to database here
-                                        console.log("Saving thresholds:", newThresholds);
-
-                                        const deviceRef = ref(database, `/devices/${deviceToManage}/threshold`)
-                                        await set(deviceRef, newThresholds)
-                                        .then(() => {
+                                        try {
+                                            // Get all form inputs by their labels rather than indexes
+                                            const newThresholds = {
+                                                ph: { 
+                                                    min: parseFloat(document.querySelector('.threshold-group:nth-child(1) .input-group:nth-child(1) input').value),
+                                                    max: parseFloat(document.querySelector('.threshold-group:nth-child(1) .input-group:nth-child(2) input').value)
+                                                },
+                                                temp: { 
+                                                    min: parseFloat(document.querySelector('.threshold-group:nth-child(2) .input-group:nth-child(1) input').value),
+                                                    max: parseFloat(document.querySelector('.threshold-group:nth-child(2) .input-group:nth-child(2) input').value)
+                                                },
+                                                tds: { 
+                                                    min: parseFloat(document.querySelector('.threshold-group:nth-child(3) .input-group:nth-child(1) input').value),
+                                                    max: parseFloat(document.querySelector('.threshold-group:nth-child(3) .input-group:nth-child(2) input').value)
+                                                },
+                                                turb: { 
+                                                    min: parseFloat(document.querySelector('.threshold-group:nth-child(4) .input-group:nth-child(1) input').value),
+                                                    max: parseFloat(document.querySelector('.threshold-group:nth-child(4) .input-group:nth-child(2) input').value)
+                                                },
+                                                watlvl: { 
+                                                    min: parseFloat(document.querySelector('.threshold-group:nth-child(5) .input-group:nth-child(1) input').value),
+                                                    max: parseFloat(document.querySelector('.threshold-group:nth-child(5) .input-group:nth-child(2) input').value)
+                                                }
+                                            };
+                                            
+                                            // Validate thresholds
+                                            if (Object.values(newThresholds).some(sensor => 
+                                                isNaN(sensor.min) || isNaN(sensor.max) || sensor.min > sensor.max)) {
+                                                throw new Error("Invalid threshold values");
+                                            }
+                                            
+                                            const deviceRef = ref(database, `/devices/${deviceToManage}/threshold`)
+                                            await set(deviceRef, newThresholds)
                                             toast.success('Threshold Updated', {position: 'top-center', autoClose: 2000, pauseOnHover: false})
-                                        })
-                                        .catch((e) => {
-                                            toast.error('Error Occured', {position: 'bottom-center', autoClose: 2000, pauseOnHover: false})
-                                        })
-
-                                        // Close popup
-                                        setDevicesPopUp('');
+                                            
+                                            // Close popup
+                                            setDevicesPopUp('');
+                                        } catch (error) {
+                                            console.error("Error updating thresholds:", error);
+                                            toast.error('Error Updating Thresholds', {position: 'bottom-center', autoClose: 2000, pauseOnHover: false})
+                                        }
                                     }}>Save Thresholds</button>
                                 </div>
                             </div>
@@ -1025,254 +1261,289 @@ const UserHome = () => {
             {/* View Analysis */}
             {(activeItem === 'analysis') && (
                 <div className='analysis-pnl'>
-                    <div className='analysis-top'>
-
-                        {/* graph */}
-                        <div className='analysis-left'>  
-                            <div className='filters'>
-                                <div className="sensor-dropdown">
-                                    <select 
-                                        value={selectedSensor} 
-                                        onChange={handleSensorChange}
-                                        className="sensor-select"
-                                    >
-                                        {sensorOptions.map(option => (
-                                            <option key={option.value} value={option.value}>
-                                                {option.label}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </div>
+                        {(!userInfo?.devices || userInfo.devices.length === 0) ? (
+                            <div className="no-devices-message">
+                                <h2>No Devices Available</h2>
+                                <p>Add a device in the Devices panel to see analytics.</p>
                             </div>
-                            <div className='chart-area'>
-                                <ResponsiveContainer width="95%" height="95%">
-                                    <LineChart
-                                        data={chartData}
-                                        margin={{ top: 20, right: 20, left: 10, bottom: 20 }}
-                                    >
-                                        <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={true} />
-                                        <XAxis 
-                                            dataKey="date"
-                                            axisLine={false}
-                                            tickLine={false}
-                                            tick={{ fill: '#888', fontSize: 12 }}
-                                            dy={10}
-                                        />
-                                        <YAxis 
-                                            axisLine={false}
-                                            tickLine={false}
-                                            tick={{ fill: '#888', fontSize: 12 }}
-                                            dx={-10}
-                                        />
-                                        <Tooltip 
-                                            content={<CustomTooltip />}
-                                            cursor={{ stroke: '#ddd', strokeWidth: 1, strokeDasharray: '3 3' }}
-                                        />
-                                        <Legend 
-                                            wrapperStyle={{ 
-                                                fontSize: '12px',
-                                                display: 'flex',
-                                                justifyContent: 'center',
-                                                flexDirection: 'row',
-                                            }}
-                                            iconType="circle"
-                                            iconSize={8}
-                                        />
-                                        
-                                        {selectedSensor === 'all' || selectedSensor === 'ph' ? (
-                                            <Line 
-                                                type="monotone" 
-                                                dataKey="ph" 
-                                                name="pH" 
-                                                stroke={getSensorConfig('ph').color}
-                                                strokeWidth={1.5}
-                                                dot={false}
-                                                activeDot={{ r: 6, strokeWidth: 0 }}
-                                                animationDuration={1500}
-                                            />
-                                        ) : null}
-                                        
-                                        {selectedSensor === 'all' || selectedSensor === 'temp' ? (
-                                            <Line 
-                                                type="monotone" 
-                                                dataKey="temp" 
-                                                name="Temperature" 
-                                                stroke={getSensorConfig('temp').color}
-                                                strokeWidth={1.5}
-                                                dot={false}
-                                                activeDot={{ r: 6, strokeWidth: 0 }}
-                                                animationDuration={1500}
-                                            />
-                                        ) : null}
-                                        
-                                        {selectedSensor === 'all' || selectedSensor === 'dissolved solids' ? (
-                                            <Line 
-                                                type="monotone" 
-                                                dataKey="tds" 
-                                                name="TDS" 
-                                                stroke={getSensorConfig('tds').color}
-                                                strokeWidth={1.5}
-                                                dot={false}
-                                                activeDot={{ r: 6, strokeWidth: 0 }}
-                                                animationDuration={1500}
-                                            />
-                                        ) : null}
-                                        
-                                        {selectedSensor === 'all' || selectedSensor === 'turbidity' ? (
-                                            <Line 
-                                                type="monotone" 
-                                                dataKey="turb" 
-                                                name="Turbidity" 
-                                                stroke={getSensorConfig('turbidity').color}
-                                                strokeWidth={1.5}
-                                                dot={false}
-                                                activeDot={{ r: 6, strokeWidth: 0 }}
-                                                animationDuration={1500}
-                                            />
-                                        ) : null}
-                                        
-                                        {selectedSensor === 'all' || selectedSensor === 'water level' ? (
-                                            <Line 
-                                                type="monotone" 
-                                                dataKey="watlvl" 
-                                                name="Water Level" 
-                                                stroke={getSensorConfig('waterLevel').color}
-                                                strokeWidth={1.5}
-                                                dot={false}
-                                                activeDot={{ r: 6, strokeWidth: 0 }}
-                                                animationDuration={1500}
-                                            />
-                                        ) : null}
-                                    </LineChart>
-                                </ResponsiveContainer>
-                            </div>
-                        </div>
-
-                        {/* Average */}
-                        <div className='analysis-right'>
-                            <div className='filters-container'>
-                                <div className="filter-group">
-                                    <h4>Time Period</h4>
-                                    <select 
-                                        value={timePeriod}
-                                        onChange={handleTimePeriodChange}
-                                        className="filter-select"
-                                    >
-                                        {timePeriodOptions.map(option => (
-                                            <option key={option.value} value={option.value}>
-                                                {option.label}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </div>
-                                <div className="filter-group">
-                                    <h4>Device</h4>
-                                    <select 
-                                        value={selectedDevice}
-                                        onChange={handleDeviceChange}
-                                        className="filter-select"
-                                    >
-                                        {userInfo?.devices.map(device => (
-                                            <option key={device.devId} value={device.devId}>
-                                                {device.devName}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </div>
-                            </div>
-                            <div className='average-data'>
-                                <h3>Average Sensor Values</h3>
-                                <div className="averages-container">
-                                    {Object.keys(averages).map(sensor => {
-                                        const config = getSensorConfig(sensor);
-                                        return (
-                                            <div className="average-item" key={sensor}>
-                                                <div className="average-icon" style={{ backgroundColor: config.color }}></div>
-                                                <div className="average-details">
-                                                    <span className="average-name">{getSensorName(sensor)}</span>
-                                                    <span className="average-value">{averages[sensor].toFixed(1)} {config.unit}</span>
-                                                </div>
+                        ) : (
+                            <>
+                                <div className='analysis-top'>
+                                    {/* graph */}
+                                    <div className='analysis-left'>  
+                                        <div className='filters'>
+                                            <div className="sensor-dropdown">
+                                                <select 
+                                                    value={selectedSensor} 
+                                                    onChange={handleSensorChange}
+                                                    className="sensor-select"
+                                                >
+                                                    {sensorOptions.map(option => (
+                                                        <option key={option.value} value={option.value}>
+                                                            {option.label}
+                                                        </option>
+                                                    ))}
+                                                </select>
                                             </div>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-                        </div>
-                        
-                    </div>
+                                        </div>
+                                        <div className='chart-area'>
+                                            <ResponsiveContainer width="95%" height="95%">
+                                                <LineChart
+                                                    data={chartData}
+                                                    margin={{ top: 20, right: 20, left: 10, bottom: 20 }}
+                                                >
+                                                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={true} />
+                                                    <XAxis 
+                                                        dataKey="date"
+                                                        axisLine={false}
+                                                        tickLine={false}
+                                                        tick={{ fill: '#888', fontSize: 12 }}
+                                                        dy={10}
+                                                    />
+                                                    <YAxis 
+                                                        axisLine={false}
+                                                        tickLine={false}
+                                                        tick={{ fill: '#888', fontSize: 12 }}
+                                                        dx={-10}
+                                                    />
+                                                    <Tooltip 
+                                                        content={<CustomTooltip />}
+                                                        cursor={{ stroke: '#ddd', strokeWidth: 1, strokeDasharray: '3 3' }}
+                                                    />
+                                                    <Legend 
+                                                        wrapperStyle={{ 
+                                                            fontSize: '12px',
+                                                            display: 'flex',
+                                                            justifyContent: 'center',
+                                                            flexDirection: 'row',
+                                                        }}
+                                                        iconType="circle"
+                                                        iconSize={8}
+                                                    />
+                                                    
+                                                    {selectedSensor === 'all' || selectedSensor === 'ph' ? (
+                                                        <Line 
+                                                            type="monotone" 
+                                                            dataKey="ph" 
+                                                            name="pH" 
+                                                            stroke={getSensorConfig('ph').color}
+                                                            strokeWidth={1.5}
+                                                            dot={false}
+                                                            activeDot={{ r: 6, strokeWidth: 0 }}
+                                                            animationDuration={1500}
+                                                        />
+                                                    ) : null}
+                                                    
+                                                    {selectedSensor === 'all' || selectedSensor === 'temp' ? (
+                                                        <Line 
+                                                            type="monotone" 
+                                                            dataKey="temp" 
+                                                            name="Temperature" 
+                                                            stroke={getSensorConfig('temp').color}
+                                                            strokeWidth={1.5}
+                                                            dot={false}
+                                                            activeDot={{ r: 6, strokeWidth: 0 }}
+                                                            animationDuration={1500}
+                                                        />
+                                                    ) : null}
+                                                    
+                                                    {selectedSensor === 'all' || selectedSensor === 'dissolved solids' ? (
+                                                        <Line 
+                                                            type="monotone" 
+                                                            dataKey="tds" 
+                                                            name="TDS" 
+                                                            stroke={getSensorConfig('tds').color}
+                                                            strokeWidth={1.5}
+                                                            dot={false}
+                                                            activeDot={{ r: 6, strokeWidth: 0 }}
+                                                            animationDuration={1500}
+                                                        />
+                                                    ) : null}
+                                                    
+                                                    {selectedSensor === 'all' || selectedSensor === 'turbidity' ? (
+                                                        <Line 
+                                                            type="monotone" 
+                                                            dataKey="turb" 
+                                                            name="Turbidity" 
+                                                            stroke={getSensorConfig('turbidity').color}
+                                                            strokeWidth={1.5}
+                                                            dot={false}
+                                                            activeDot={{ r: 6, strokeWidth: 0 }}
+                                                            animationDuration={1500}
+                                                        />
+                                                    ) : null}
+                                                    
+                                                    {selectedSensor === 'all' || selectedSensor === 'water level' ? (
+                                                        <Line 
+                                                            type="monotone" 
+                                                            dataKey="watlvl" 
+                                                            name="Water Level" 
+                                                            stroke={getSensorConfig('waterLevel').color}
+                                                            strokeWidth={1.5}
+                                                            dot={false}
+                                                            activeDot={{ r: 6, strokeWidth: 0 }}
+                                                            animationDuration={1500}
+                                                        />
+                                                    ) : null}
+                                                </LineChart>
+                                            </ResponsiveContainer>
+                                        </div>
+                                    </div>
 
-                    {/* notification */}
-                    <div className='analysis-bottom'>
-                        <div className='notification-container'>
-                            <div className='notification-header'>
-                                <h3>Notification History</h3>
-                                <div className='notification-controls'>
-                                    <select className='notification-filter'>
-                                        <option value="all">All Notifications</option>
-                                        <option value="warning">Warnings</option>
-                                        <option value="critical">Critical Alerts</option>
-                                        <option value="info">Information</option>
-                                    </select>
+                                    {/* Average */}
+                                    <div className='analysis-right'>
+                                        <div className='filters-container'>
+                                            <div className="filter-group">
+                                                <h4>Time Period</h4>
+                                                <select 
+                                                    value={timePeriod}
+                                                    onChange={handleTimePeriodChange}
+                                                    className="filter-select"
+                                                >
+                                                    {timePeriodOptions.map(option => (
+                                                        <option key={option.value} value={option.value}>
+                                                            {option.label}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                            <div className="filter-group">
+                                                <h4>Device</h4>
+                                                <select 
+                                                    value={selectedDevice}
+                                                    onChange={handleDeviceChange}
+                                                    className="filter-select"
+                                                >
+                                                    {userInfo?.devices.map(device => (
+                                                        <option key={device.devId} value={device.devId}>
+                                                            {device.devName}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div className='average-data'>
+                                            <h3>Average Sensor Values</h3>
+                                            <div className="averages-container">
+                                                {Object.keys(averages).map(sensor => {
+                                                    const config = getSensorConfig(sensor);
+                                                    return (
+                                                        <div className="average-item" key={sensor}>
+                                                            <div className="average-icon" style={{ backgroundColor: config.color }}></div>
+                                                            <div className="average-details">
+                                                                <span className="average-name">{getSensorName(sensor)}</span>
+                                                                <span className="average-value">{averages[sensor].toFixed(1)} {config.unit}</span>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
                                 </div>
-                            </div>
-                            
-                            <div className='notification-list'>
-                                {/* Critical notification */}
-                                <div className='notification-item critical'>
-                                    <div className='notification-icon-wrapper'>
-                                        <div className='notification-icon'>!</div>
-                                    </div>
-                                    <div className='notification-content'>
-                                        <div className='notification-top-row'>
-                                            <span className='notification-title'>Critical: High pH Level</span>
-                                            <span className='notification-time'>Apr 11, 10:45 AM</span>
+
+                                {/* notification */}
+                                <div className='analysis-bottom'>
+                                    <div className='notification-container'>
+                                        <div className='notification-header'>
+                                            <h3>Notification History</h3>
+                                            <div className='notification-controls'>
+                                                <select 
+                                                    className='notification-filter'
+                                                    value={notificationFilter}
+                                                    onChange={handleNotificationFilterChange}
+                                                >
+                                                    <option value="all">All Notifications</option>
+                                                    <option value="warning">Warnings</option>
+                                                    <option value="critical">Critical Alerts</option>
+                                                    <option value="info">Normal Range</option>
+                                                </select>
+                                            </div>
                                         </div>
-                                        <p className='notification-message'>pH value 9.2 is critically high in Pond 1. Immediate action required.</p>
-                                        <div className='notification-footer'>
-                                            <span className='notification-device'>Pond 1</span>
-                                            <span className='notification-sensor' style={{ color: '#6366F1' }}>pH</span>
+                                        
+                                        <div className='notification-list'>
+                                            {notifs.length === 0 ? (
+                                                <div className="empty-notifications">
+                                                    <p>No notifications available</p>
+                                                </div>
+                                            ) : (
+                                                // Filter notifications to only show ones from the selected device
+                                                notifs
+                                                    .filter(notification => {
+                                                        // Find the current device name based on selectedDevice ID
+                                                        const selectedDeviceName = userInfo?.devices?.find(
+                                                            device => device.devId === selectedDevice
+                                                        )?.devName;
+                                                        
+                                                        // First filter by device
+                                                        const deviceMatch = notification.name === selectedDeviceName;
+                                                        
+                                                        // Then apply notification type filter
+                                                        if (notificationFilter === 'all') {
+                                                            return deviceMatch;
+                                                        } else {
+                                                            const notificationType = getNotificationType(
+                                                                notification.sensor,
+                                                                notification.sensorVal,
+                                                                notification.min,
+                                                                notification.max
+                                                            );
+                                                            return deviceMatch && notificationType === notificationFilter;
+                                                        }
+                                                    })
+                                                    .map((notification) => {
+                                                        const notificationType = getNotificationType(
+                                                            notification.sensor,
+                                                            notification.sensorVal,
+                                                            notification.min,
+                                                            notification.max
+                                                        );
+                                                        
+                                                        let title = '';
+                                                        let message = '';
+                                                        const sensorUnit = getSensorUnit(notification.sensor);
+                                                        
+                                                        if (notification.sensorVal < notification.min) {
+                                                            title = `${notificationType === 'critical' ? 'Critical: ' : 'Warning: '}Low ${getSensorName(notification.sensor)}`;
+                                                            message = `${getSensorName(notification.sensor)} value ${notification.sensorVal.toFixed(1)}${sensorUnit} is below minimum threshold (${notification.min}${sensorUnit})`;
+                                                        } else if (notification.sensorVal > notification.max) {
+                                                            title = `${notificationType === 'critical' ? 'Critical: ' : 'Warning: '}High ${getSensorName(notification.sensor)}`;
+                                                            message = `${getSensorName(notification.sensor)} value ${notification.sensorVal.toFixed(1)}${sensorUnit} is above maximum threshold (${notification.max}${sensorUnit})`;
+                                                        } else {
+                                                            title = `${getSensorName(notification.sensor)} normal range`;
+                                                            message = `${getSensorName(notification.sensor)} is at ${notification.sensorVal.toFixed(1)}${sensorUnit}, within acceptable range`;
+                                                        }
+                                                        
+                                                        return (
+                                                            <div key={notification.id} className={`notification-item ${notificationType}`}>
+                                                                <div className="notification-icon-wrapper">
+                                                                    <div className="notification-icon">
+                                                                        {notificationType === 'info' ? 'i' : '!'}
+                                                                    </div>
+                                                                </div>
+                                                                <div className="notification-content">
+                                                                    <div className="notification-top-row">
+                                                                        <span className="notification-title">{title}</span>
+                                                                        <span className="notification-time">{formatNotificationTime(notification.time)}</span>
+                                                                    </div>
+                                                                    <p className="notification-message">{message}</p>
+                                                                    <div className="notification-footer">
+                                                                        <span className="notification-device">{notification.name}</span>
+                                                                        <span className="notification-sensor" style={{ color: getSensorConfig(notification.sensor).color }}>
+                                                                            {getSensorName(notification.sensor)}
+                                                                        </span>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })
+                                            )}
                                         </div>
                                     </div>
-                                </div>
-                                
-                                {/* Warning notification */}
-                                <div className='notification-item warning'>
-                                    <div className='notification-icon-wrapper'>
-                                        <div className='notification-icon'>!</div>
-                                    </div>
-                                    <div className='notification-content'>
-                                        <div className='notification-top-row'>
-                                            <span className='notification-title'>Warning: Temperature Rising</span>
-                                            <span className='notification-time'>Apr 10, 3:22 PM</span>
-                                        </div>
-                                        <p className='notification-message'>Temperature 27.8°C is above optimal range for this species.</p>
-                                        <div className='notification-footer'>
-                                            <span className='notification-device'>Aquarium 2</span>
-                                            <span className='notification-sensor' style={{ color: '#F97316' }}>Temperature</span>
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                {/* Info notification */}
-                                <div className='notification-item info'>
-                                    <div className='notification-icon-wrapper'>
-                                        <div className='notification-icon'>i</div>
-                                    </div>
-                                    <div className='notification-content'>
-                                        <div className='notification-top-row'>
-                                            <span className='notification-title'>Normal Readings</span>
-                                            <span className='notification-time'>Apr 9, 9:15 AM</span>
-                                        </div>
-                                        <p className='notification-message'>All sensors within optimal range for Fish Tank 3.</p>
-                                        <div className='notification-footer'>
-                                            <span className='notification-device'>Fish Tank 3</span>
-                                            <span className='notification-sensor' style={{ color: '#10B981' }}>System</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>                    
+                                </div> 
+                            </>
+                        )}                   
                 </div>
             )} 
         </div>
