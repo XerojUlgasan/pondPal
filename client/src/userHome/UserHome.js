@@ -883,7 +883,7 @@ const UserHome = () => {
                             <div className="notification-content">
                               <div className="notification-top-row">
                                 <span className="notification-title">{title}</span>
-                                <span className="notification-time">{formatNotificationTime(notification.time)}</span>
+                                <span className="notification-time">{formatNotificationTime(parseInt(notification.time))}</span>
                               </div>
                               <p className="notification-message">{message}</p>
                               <div className="notification-footer">
@@ -1584,7 +1584,7 @@ const UserHome = () => {
                                                                 <div className="notification-content">
                                                                     <div className="notification-top-row">
                                                                         <span className="notification-title">{title}</span>
-                                                                        <span className="notification-time">{formatNotificationTime(notification.time)}</span>
+                                                                        <span className="notification-time">{formatNotificationTime(parseInt(notification.time))}</span>
                                                                     </div>
                                                                     <p className="notification-message">{message}</p>
                                                                     <div className="notification-footer">
