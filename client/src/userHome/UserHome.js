@@ -116,6 +116,7 @@ const UserHome = () => {
     })
     const [notifs, setNotifs] = useState([])
     const navigate = useNavigate();
+    const [selectedDate, setSelectedDate] = useState(new Date().toLocaleDateString('en-CA')); // Default to today
 
     // Handler for sensor selection change
     const handleSensorChange = (e) => {
@@ -371,6 +372,7 @@ const UserHome = () => {
         { value: 'daily', label: 'Today' },
         { value: 'weekly', label: 'Last 7 days' },
         { value: 'monthly', label: 'Last 30 days' },
+        { value: 'custom', label: 'Custom Date' },
     ];
 
     // Calculate average values based on chartData
@@ -426,7 +428,7 @@ const UserHome = () => {
         if(activeItem === 'analysis' && userInfo?.devices?.length > 0){
             fetchData();
         }
-    }, [selectedSensor, timePeriod, selectedDevice, activeItem, userInfo?.devices?.length]);
+    }, [selectedSensor, timePeriod, selectedDevice, selectedDate, activeItem, userInfo?.devices?.length]);
     
     useEffect(() => {
         if(userInfo?.devices?.length === 0){
@@ -597,6 +599,47 @@ const UserHome = () => {
             return data;
         }
 
+        if(timePeriod === 'custom') {
+            // Format: YYYY-MM-DD
+            const formattedDate = selectedDate;
+            const devRecordRef = ref(database, `/devices/${selectedDevice}/records/${formattedDate}`);
+            
+            try {
+                const snapshot = await get(devRecordRef);
+                
+                if(snapshot.exists()) {
+                    const recordData = snapshot.val();
+                    Object.keys(recordData).forEach(hour => {
+                        const record = {
+                            date: hour,
+                            ...recordData[hour]
+                        };
+                        data.push(record);
+                    });
+                    
+                    data.sort((a, b) => {
+                        const timeA = a.date.split(':').map(Number);
+                        const timeB = b.date.split(':').map(Number);
+                        return (timeA[0] * 60 + timeA[1]) - (timeB[0] * 60 + timeB[1]);
+                    });
+                    
+                    console.log(data);
+                } else {
+                    console.log(`No data for ${formattedDate}`);
+                    toast.info(`No records found for ${formattedDate}`, {
+                        position: 'bottom-center', 
+                        autoClose: 2000,
+                        pauseOnHover: false
+                    });
+                    return [];
+                }
+            } catch (error) {
+                console.error('Error fetching data:', error);
+                toast.error('Error loading data', {position: 'bottom-center', autoClose: 2000, pauseOnHover: false});
+                return [];
+            }
+        }
+
         console.log(data)
         return data;
     };
@@ -640,7 +683,7 @@ const UserHome = () => {
                         
                         if(deviceIndex === -1) return prev;
 
-                        const lastUpdateTime = new Date(deviceData?.lastUpdate);
+                        const lastUpdateTime = new Date(parseInt(deviceData?.lastUpdate));
                         const currentTime = new Date(Date.now());
                         const timeDifference = currentTime - lastUpdateTime;
                         const isOnline = timeDifference < 60000;
@@ -761,6 +804,10 @@ const UserHome = () => {
     // Add this handler for notification filter changes
     const handleNotificationFilterChange = (e) => {
         setNotificationFilter(e.target.value);
+    };
+
+    const handleDateChange = (e) => {
+        setSelectedDate(e.target.value);
     };
 
     const averages = calculateAverages();
@@ -1421,6 +1468,18 @@ const UserHome = () => {
                                                     ))}
                                                 </select>
                                             </div>
+                                            {timePeriod === 'custom' && (
+                                                <div className="filter-group">
+                                                    <h4>Select Date</h4>
+                                                    <input
+                                                        type="date"
+                                                        value={selectedDate}
+                                                        onChange={handleDateChange}
+                                                        className="filter-select"
+                                                        max={new Date().toLocaleDateString('en-CA')}
+                                                    />
+                                                </div>
+                                            )}
                                         </div>
                                         <div className='average-data'>
                                             <h3>Average Sensor Values</h3>
