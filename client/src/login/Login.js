@@ -4,7 +4,7 @@ import { data, Link, useNavigate } from 'react-router-dom';
 import {auth, database, fireStoreDb} from '../firebaseConfig.js'
 import { child, equalTo, get, onChildAdded, onValue, orderByChild, query, ref } from 'firebase/database';
 import { useEffect, useState } from 'react';
-import { getAuth, GoogleAuthProvider, sendEmailVerification, signInWithEmailAndPassword, signInWithPopup } from 'firebase/auth';
+import { getAuth, GoogleAuthProvider, sendEmailVerification, sendPasswordResetEmail, signInWithEmailAndPassword, signInWithPopup } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { toast } from 'react-toastify';
 
@@ -139,12 +139,47 @@ const Login = () => {
         }
     }, [])
 
+    const handleForgotPassword = async () => {
+        if (!details.email) {
+            toast.error('Please enter your email address first', {
+                position: 'bottom-center', 
+                autoClose: 2000, 
+                pauseOnHover: false
+            });
+            return;
+        }
+        
+        try {
+            await sendPasswordResetEmail(auth, details.email);
+            toast.success('Password reset email sent! Check your inbox.', {
+                position: 'top-center', 
+                autoClose: 3000, 
+                pauseOnHover: false
+            });
+        } catch (error) {
+            console.error('Error sending password reset email:', error);
+            let errorMessage = 'Failed to send password reset email';
+            
+            if (error.code === 'auth/invalid-email') {
+                errorMessage = 'Invalid email address';
+            } else if (error.code === 'auth/user-not-found') {
+                errorMessage = 'No account found with this email address';
+            }
+            
+            toast.error(errorMessage, {
+                position: 'bottom-center', 
+                autoClose: 3000, 
+                pauseOnHover: false
+            });
+        }
+    };
+
     return (
         <div className='login'>
             <form action='/userhome' onSubmit={formSubmit}>
 
                 <label 
-                className='ewan'>Login</label>
+                className='ewan'>Log In</label>
 
                 <input 
                 type='text' 
@@ -163,6 +198,12 @@ const Login = () => {
                 required
                 value={details.password}
                 onChange={handleChange}/> 
+
+                <div className="forgot-password-container">
+                    <span className="forgot-password" onClick={handleForgotPassword}>
+                        Forgot password?
+                    </span>
+                </div>
                 
                 <button 
                 type='submit' 

@@ -10,6 +10,7 @@ import 'react-toastify/dist/ReactToastify.css';
 import AboutUs from './aboutUs/AboutUs';
 import LearnMore from './learnMore/LearnMore';
 import Policy from './policy/policy';
+import Hardware from './hardware/Hardware';
 
 function App() {
   return (
@@ -24,6 +25,7 @@ function App() {
           <Route path="/aboutus" element={<AboutUs/>} />
           <Route path="/learnmore" element={<LearnMore/>} />
           <Route path="/policy" element={<Policy/>} />
+          <Route path="/hardware" element={<Hardware/>} />
           
           <Route path="/login" element={<Login/>} />
           <Route path="/register" element={<Register/>} />

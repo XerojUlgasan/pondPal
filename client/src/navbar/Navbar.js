@@ -48,7 +48,7 @@ const Navbar = () => {
                         {!pn.includes('userhome') && (
                             <>
                                 <h4><Link to='/'>Home</Link></h4>
-                                <h4><Link>Hardware</Link></h4>
+                                <h4><Link to='/hardware'>Hardware</Link></h4>
                                 <h4><Link to='/policy'>Policy</Link></h4>
                                 <h4><Link to='/aboutus'>About</Link></h4>  
                             </>
@@ -76,7 +76,7 @@ const Navbar = () => {
             {isMobile && menuOpen && !pn.includes('userhome') && (
                 <div className="mobile-dropdown">
                     <h4><Link to='/' onClick={() => setMenuOpen(false)}>Home</Link></h4>
-                    <h4><Link onClick={() => setMenuOpen(false)}>Hardware</Link></h4>
+                    <h4><Link to='/hardware' onClick={() => setMenuOpen(false)}>Hardware</Link></h4>
                     <h4><Link to='/policy' onClick={() => setMenuOpen(false)}>Policy</Link></h4>
                     <h4><Link to='/aboutus' onClick={() => setMenuOpen(false)}>About</Link></h4>
                 </div>

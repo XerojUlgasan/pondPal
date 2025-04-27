@@ -83,47 +83,130 @@
 
 
 /* nagbar ovverlay */
+/* Fixed Navigation Bar Enhancement */
 .above-nav {
-    position: absolute;
-    width: 250px;
-    height: 70px;
-    z-index: 9999;
-    top: 0px;
-    right: 0px;
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
+  position: fixed; /* Change from absolute to fixed */
+  width: 250px;
+  height: 60px;
+  z-index: 99;
+  top: 5px;
+  right: 0px;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: rgba(255, 255, 255, 0.85); /* Add semi-transparent background */
+  backdrop-filter: blur(8px); /* Add blur effect for modern look */
+  border-radius: 15px; /* Rounded corner */
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05); /* Subtle shadow */
+  padding: 0 15px;
+  transition: all 0.3s ease; /* Smooth transitions */
+  border-left: 1px solid rgba(46, 156, 253, 0.1);
+  border-bottom: 1px solid rgba(46, 156, 253, 0.1);
 }
+
+.above-nav:hover {
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+}
+
 .above-nav .notifs {
-    object-fit: contain;
-    height: 30px;
-    width: 30px;
-    transition: transform 0.3s ease;
+  object-fit: contain;
+  height: 30px;
+  width: 30px;
+  transition: transform 0.3s ease, filter 0.3s ease;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
 }
 
 .above-nav .notifs:hover {
-    transform: scale(1.15);
+  transform: scale(1.15) rotate(5deg);
+  filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.15));
 }
 
 .above-nav .user-cont {
-    height: 100%;
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    gap: 5px;
+  height: 90%;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  position: relative;
+  padding: 8px;
+  border-radius: 10px;
+  transition: background 0.3s ease;
+  box-sizing: border-box;
+}
+
+.above-nav .user-cont:hover {
+  background: rgba(46, 156, 253, 0.08);
 }
 
 .above-nav .user-cont img {
-    object-fit: contain;
-    height: 40px;
+  object-fit: contain;
+  height: 40px;
+  border-radius: 50%;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease;
 }
 
+.above-nav .user-cont:hover img {
+  transform: scale(1.05);
+}
 
-.above-nav .user-cont .identity-cont h4, 
-.above-nav .user-cont .identity-cont h6{
-    margin: 0px;
+.above-nav .user-cont .identity-cont {
+  display: flex;
+  flex-direction: column;
+  max-width: 150px;
+}
+
+.above-nav .user-cont .identity-cont h4 {
+  margin: 0px;
+  font-size: 14px;
+  color: #273f5c;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.above-nav .user-cont .identity-cont h6 {
+  margin: 0px;
+  font-size: 12px;
+  color: #6b7280;
+  white-space: nowrap;
+  overflow: hidden;  
+  text-overflow: ellipsis;
+}
+
+/* Add a status indicator to show navigation is fixed */
+.above-nav::after {
+  content: '';
+  position: absolute;
+  bottom: 5px;
+  left: 15px;
+  width: 35px;
+  height: 3px;
+  background: linear-gradient(90deg, #2e9cfd, transparent);
+  border-radius: 3px;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.above-nav:hover::after {
+  opacity: 1;
+}
+
+/* Media query for smaller screens */
+@media screen and (max-width: 768px) {
+  .above-nav {
+      width: 100%;
+      border-radius: 0;
+      border-left: none;
+      justify-content: flex-end;
+  }
+  
+  .above-nav .user-cont .identity-cont h6 {
+      display: none;
+  }
 }
 
 /* Style for all sidebar items */
@@ -1509,6 +1592,14 @@
     pointer-events: none;
 }
 
+.single-input {
+  margin-top: 10px;
+}
+
+.full-width {
+  width: 80%;
+}
+
 .input-group input::-webkit-inner-spin-button,
 .input-group input::-webkit-outer-spin-button {
     -webkit-appearance: none;
@@ -1533,6 +1624,10 @@
         padding: 16px;
     }
     
+    .full-width {
+      width: 100%;
+    }
+
     .threshold-inputs {
         flex-direction: column;
         gap: 12px;

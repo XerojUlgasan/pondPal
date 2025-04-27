@@ -16,7 +16,7 @@
     justify-content: center;
     width: 100%;
     background: linear-gradient(135deg, #f5f7fa, #ebf0f6);
-    min-height: 100vh;
+    height: calc(100vh - 70px);
 }
 
 .register * {

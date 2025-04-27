@@ -1,0 +1,253 @@
+:root {
+  --primary-blue: #2e9cfd;
+  --dark-blue: #273f5c;
+  --light-blue: #f0f8ff;
+  --background: #f9fafc;
+  --text-dark: #333;
+  --text-light: #555;
+  --shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+  --animation-duration: 0.8s;
+}
+
+/* Animation keyframes */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+/* Container styles */
+.container {
+  max-width: 1200px;
+  margin: 40px auto;
+  padding: 20px 20px;
+  display: flex;
+  flex-direction: column;
+  animation: fadeIn 0.8s ease-out;
+  position: relative;
+}
+
+/* Navigation bar */
+.nav-bar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 30px;
+  padding: 15px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  animation: fadeInUp 0.6s ease-out;
+}
+
+.nav-bar button {
+  background: linear-gradient(to right, #f0f8ff, #ebf4ff);
+  border: 1px solid rgba(46, 156, 253, 0.2);
+  border-radius: 8px;
+  color: var(--dark-blue);
+  padding: 10px 16px;
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.nav-bar button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: rgba(46, 156, 253, 0.2);
+  transition: transform 0.6s ease;
+  transform: skewX(-15deg);
+}
+
+.nav-bar button:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 15px rgba(46, 156, 253, 0.15);
+  border-color: var(--primary-blue);
+}
+
+.nav-bar button:hover::before {
+  transform: translateX(200%) skewX(-15deg);
+}
+
+.nav-bar button.active {
+  background: linear-gradient(135deg, #2e9cfd, #2280dd);
+  color: white;
+  box-shadow: 0 4px 12px rgba(46, 156, 253, 0.3);
+}
+
+/* Content sections */
+.content-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 50px;
+}
+
+.content {
+  display: flex;
+  flex-direction: row;
+  background-color: white;
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  border: 1px solid rgba(46, 156, 253, 0.08);
+  transition: all 0.5s ease;
+  opacity: 0;
+  animation: fadeInUp 0.8s ease-out forwards;
+  scroll-margin-top: 120px; /* Add space for sticky navbar when scrolling */
+}
+
+.content:nth-child(1) { animation-delay: 0.1s; }
+.content:nth-child(2) { animation-delay: 0.2s; }
+.content:nth-child(3) { animation-delay: 0.3s; }
+.content:nth-child(4) { animation-delay: 0.4s; }
+.content:nth-child(5) { animation-delay: 0.5s; }
+.content:nth-child(6) { animation-delay: 0.6s; }
+.content:nth-child(7) { animation-delay: 0.7s; }
+.content:nth-child(8) { animation-delay: 0.8s; }
+
+.content:hover {
+  transform: translateY(-5px) scale(1.01);
+  box-shadow: 0 15px 30px rgba(0, 0, 0, 0.12);
+}
+
+/* Responsive layout for mobile */
+@media (max-width: 768px) {
+  .content {
+    flex-direction: column-reverse;
+  }
+}
+
+.content .text {
+  flex: 1;
+  padding: 30px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.content h2 {
+  color: var(--dark-blue);
+  margin-bottom: 20px;
+  position: relative;
+  padding-bottom: 10px;
+  font-size: 1.8rem;
+}
+
+.content h2::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 60px;
+  height: 3px;
+  background: linear-gradient(90deg, var(--primary-blue), transparent);
+  transition: width 0.3s ease;
+}
+
+.content:hover h2::after {
+  width: 100px;
+}
+
+.content p {
+  color: var(--text-light);
+  line-height: 1.7;
+  font-size: 1.05rem;
+}
+
+.content .image-box {
+  width: 40%;
+  min-height: 280px;
+  overflow: hidden;
+  background: linear-gradient(135deg, #ebf4ff, #dbeafe);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@media (max-width: 768px) {
+  .content .image-box {
+    width: 100%;
+    min-height: 220px;
+  }
+}
+
+.content .image-box img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  transition: transform 0.5s ease;
+}
+
+.content:hover .image-box img {
+  transform: scale(1.05);
+}
+
+/* Scroll to top button - Fixed version */
+.scroll-to-top {
+  position: fixed;
+  bottom: 30px;
+  right: 30px;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #2e9cfd, #2280dd);
+  color: white;
+  border: none;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 1000;
+  transition: all 0.3s ease;
+  opacity: 0;
+  animation: fadeIn 0.3s ease-out forwards;
+}
+
+.scroll-to-top:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 20px rgba(46, 156, 253, 0.4);
+}
+
+/* Remove this rotation that was causing the arrow to point down */
+.scroll-to-top svg {
+  /* transform: rotate(180deg); - REMOVE THIS LINE */
+}
+
+/* Add a separate continuous pulse animation that doesn't conflict with hover */
+@keyframes gentlePulse {
+  0% { box-shadow: 0 4px 15px rgba(46, 156, 253, 0.2); }
+  50% { box-shadow: 0 8px 25px rgba(46, 156, 253, 0.5); }
+  100% { box-shadow: 0 4px 15px rgba(46, 156, 253, 0.2); }
+}
+
+.scroll-to-top {
+  animation: fadeIn 0.3s ease-out forwards, gentlePulse 2s infinite;
+}

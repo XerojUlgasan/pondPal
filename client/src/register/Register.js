@@ -198,7 +198,7 @@ const Register = () => {
         <div className='register'>
             <form onSubmit={registerButton}>
                 <div className='acc-info info-cont'>
-                    <label className='title'>Account Info</label>
+                    <label className='title'>Sign Up</label>
                     
                     <div className='input-group'>
                         <label>Email</label>

@@ -1125,11 +1125,11 @@ const UserHome = () => {
                                         <div className="threshold-inputs">
                                             <div className="input-group">
                                                 <label>Minimum</label>
-                                                <input type="number" step="0.1" defaultValue={device.threshold?.ph.min || "6.5"} />
+                                                <input type="number" step="0.1" min="1" defaultValue={device.threshold?.ph.min || "6.5"} />
                                             </div>
                                             <div className="input-group">
                                                 <label>Maximum</label>
-                                                <input type="number" step="0.1" defaultValue={device.threshold?.ph.max || "8.0"} />
+                                                <input type="number" step="0.1" min="1" defaultValue={device.threshold?.ph.max || "8.0"} />
                                             </div>
                                         </div>
                                     </div>
@@ -1139,12 +1139,12 @@ const UserHome = () => {
                                         <div className="threshold-inputs">
                                             <div className="input-group">
                                                 <label>Minimum</label>
-                                                <input type="number" step="0.1" defaultValue={device.threshold?.temp.min || "20"} />
+                                                <input type="number" step="0.1" min="1" defaultValue={device.threshold?.temp.min || "20"} />
                                                 <span className="unit">°C</span>
                                             </div>
                                             <div className="input-group">
                                                 <label>Maximum</label>
-                                                <input type="number" step="0.1" defaultValue={device.threshold?.temp.max || "28"} />
+                                                <input type="number" step="0.1" min="1" defaultValue={device.threshold?.temp.max || "28"} />
                                                 <span className="unit">°C</span>
                                             </div>
                                         </div>
@@ -1155,12 +1155,12 @@ const UserHome = () => {
                                         <div className="threshold-inputs">
                                             <div className="input-group">
                                                 <label>Minimum</label>
-                                                <input type="number" defaultValue={device.threshold?.tds.min || "150"} />
+                                                <input type="number" min="1" defaultValue={device.threshold?.tds.min || "150"} />
                                                 <span className="unit">ppm</span>
                                             </div>
                                             <div className="input-group">
                                                 <label>Maximum</label>
-                                                <input type="number" defaultValue={device.threshold?.tds.max || "250"} />
+                                                <input type="number" min="1" defaultValue={device.threshold?.tds.max || "250"} />
                                                 <span className="unit">ppm</span>
                                             </div>
                                         </div>
@@ -1171,12 +1171,12 @@ const UserHome = () => {
                                         <div className="threshold-inputs">
                                             <div className="input-group">
                                                 <label>Minimum</label>
-                                                <input type="number" step="0.1" defaultValue={device.threshold?.turb.min || "0"} />
+                                                <input type="number" step="0.1" min="1" defaultValue={device.threshold?.turb.min || "1"} />
                                                 <span className="unit">NTU</span>
                                             </div>
                                             <div className="input-group">
                                                 <label>Maximum</label>
-                                                <input type="number" step="0.1" defaultValue={device.threshold?.turb.max || "20"} />
+                                                <input type="number" step="0.1" min="1" defaultValue={device.threshold?.turb.max || "20"} />
                                                 <span className="unit">NTU</span>
                                             </div>
                                         </div>
@@ -1187,13 +1187,20 @@ const UserHome = () => {
                                         <div className="threshold-inputs">
                                             <div className="input-group">
                                                 <label>Minimum</label>
-                                                <input type="number" defaultValue={device.threshold?.watlvl.min || "70"} />
+                                                <input type="number" min="1" defaultValue={device.threshold?.watlvl.min || "70"} />
                                                 <span className="unit">%</span>
                                             </div>
                                             <div className="input-group">
                                                 <label>Maximum</label>
-                                                <input type="number" defaultValue={device.threshold?.watlvl.max || "100"} />
+                                                <input type="number" min="1" defaultValue={device.threshold?.watlvl.max || "100"} />
                                                 <span className="unit">%</span>
+                                            </div>
+                                        </div>
+                                        <div className="threshold-inputs single-input">
+                                            <div className="input-group full-width">
+                                                <label>Depth</label>
+                                                <input type="number" min="0.5" defaultValue={device.threshold?.watlvl.depth || "1"} />
+                                                <span className="unit">Meters</span>
                                             </div>
                                         </div>
                                     </div>
@@ -1223,14 +1230,21 @@ const UserHome = () => {
                                                 },
                                                 watlvl: { 
                                                     min: parseFloat(document.querySelector('.threshold-group:nth-child(5) .input-group:nth-child(1) input').value),
-                                                    max: parseFloat(document.querySelector('.threshold-group:nth-child(5) .input-group:nth-child(2) input').value)
+                                                    max: parseFloat(document.querySelector('.threshold-group:nth-child(5) .input-group:nth-child(2) input').value),
+                                                    depth: parseFloat(document.querySelector('.threshold-group:nth-child(5) .single-input .full-width input').value)
                                                 }
                                             };
                                             
-                                            // Validate thresholds
+                                            // Validate thresholds - check for NaN, min > max, or values < 1
                                             if (Object.values(newThresholds).some(sensor => 
-                                                isNaN(sensor.min) || isNaN(sensor.max) || sensor.min > sensor.max)) {
+                                                isNaN(sensor.min) || isNaN(sensor.max) || 
+                                                sensor.min > sensor.max || 
+                                                sensor.min < 1 || sensor.max < 1)) {
                                                 throw new Error("Invalid threshold values");
+                                            }
+
+                                            if(newThresholds.watlvl.depth < 0.5){
+                                                throw new Error("watlvl");
                                             }
                                             
                                             const deviceRef = ref(database, `/devices/${deviceToManage}/threshold`)
@@ -1240,8 +1254,15 @@ const UserHome = () => {
                                             // Close popup
                                             setDevicesPopUp('');
                                         } catch (error) {
+                                            if(error.message === "watlvl"){
+                                                toast.error('Minimum value for depth is 0.5 meters', {position: 'bottom-center', autoClose: 3000, pauseOnHover: false})
+                                                return;
+                                            }
+
                                             console.error("Error updating thresholds:", error);
-                                            toast.error('Error Updating Thresholds', {position: 'bottom-center', autoClose: 2000, pauseOnHover: false})
+                                            toast.error('Error: Ensure all values are at least 1 and maximum values are greater than minimum values', {position: 'bottom-center', autoClose: 3000, pauseOnHover: false})
+                                        
+                                        
                                         }
                                     }}>Save Thresholds</button>
                                 </div>

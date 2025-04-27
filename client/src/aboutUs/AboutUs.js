@@ -8,6 +8,8 @@ import anton from './baluya.jpg'
 import kiervy from './kiervy.jpg'
 import dacayo from './dacayo.jpg'
 import aragon from './aragon.jpg'
+import enzo from './enzo.jpg'
+import notarion from './notarion.jpg'
 
 import us from './us.jpg'
 
@@ -86,7 +88,7 @@ const AboutUs = () => {
                     <p>System Analyst</p>
                 </div>
                 <div className="team-card">
-                    <img src="enzo.jpg" alt="Team Member" />
+                    <img src={enzo} alt="Team Member" />
                     <h3>Prince Enzo Magundayao</h3>
                     <p>Technical Writer 3</p>
                 </div>
@@ -103,6 +105,11 @@ const AboutUs = () => {
                 <div className="team-card">
                     <img src={aragon} alt="Team Member" />
                     <h3>Irriz Gleen Aragon</h3>
+                    <p>UI/UX Designer</p>
+                </div>
+                <div className="team-card">
+                    <img src={notarion} alt="Team Member" />
+                    <h3>John Clyde Notarion</h3>
                     <p>UI/UX Designer</p>
                 </div>
                 </div>
