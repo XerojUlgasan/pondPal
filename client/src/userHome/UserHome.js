@@ -1005,23 +1005,23 @@ const UserHome = () => {
                                         <div className='device-stats'>
                                             <div className='stat-item'>
                                                 <span className='stat-label'>pH</span>
-                                                <span className='stat-value'>{device.sensors?.ph}</span>
+                                                <span className='stat-value'>{device.sensors?.ph.toFixed(1)}</span>
                                             </div>
                                             <div className='stat-item'>
                                                 <span className='stat-label'>Temp</span>
-                                                <span className='stat-value'>{device.sensors?.temp}°C</span>
+                                                <span className='stat-value'>{device.sensors?.temp.toFixed(1)}°C</span>
                                             </div>
                                             <div className='stat-item'>
                                                 <span className='stat-label'>TDS</span>
-                                                <span className='stat-value'>{device.sensors?.tds}</span>
+                                                <span className='stat-value'>{device.sensors?.tds.toFixed(1)}</span>
                                             </div>
                                             <div className='stat-item'>
                                                 <span className='stat-label'>Turbidity</span>
-                                                <span className='stat-value'>{device.sensors?.turb}</span>
+                                                <span className='stat-value'>{device.sensors?.turb.toFixed(1)}</span>
                                             </div>
                                             <div className='stat-item'>
                                                 <span className='stat-label'>Water Level</span>
-                                                <span className='stat-value'>{device.sensors?.watlvl}%</span>
+                                                <span className='stat-value'>{device.sensors?.watlvl.toFixed(1)}%</span>
                                             </div>
                                         </div>
                                         
