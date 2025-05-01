@@ -118,6 +118,9 @@ const UserHome = () => {
     const navigate = useNavigate();
     const [selectedDate, setSelectedDate] = useState(new Date().toLocaleDateString('en-CA')); // Default to today
 
+    // Add this state to track power saving mode
+    const [isPowerSaving, setIsPowerSaving] = useState(false);
+
     // Handler for sensor selection change
     const handleSensorChange = (e) => {
         setSelectedSensor(e.target.value);
@@ -810,6 +813,41 @@ const UserHome = () => {
         setSelectedDate(e.target.value);
     };
 
+    // Add this useEffect to fetch the initial power saving state
+    useEffect(() => {
+        if (selectedDevice) {
+            const powerSavingRef = ref(database, `/devices/${selectedDevice}/isPowerSaving`);
+            get(powerSavingRef).then((snapshot) => {
+                if (snapshot.exists()) {
+                    setIsPowerSaving(snapshot.val());
+                }
+            }).catch(error => {
+                console.error("Error fetching power saving mode:", error);
+            });
+        }
+    }, [selectedDevice]);
+
+    // Add this function to handle power saving toggle
+    const handlePowerSavingToggle = async () => {
+        try {
+            const newValue = !isPowerSaving;
+            const powerSavingRef = ref(database, `/devices/${selectedDevice}/isPowerSaving`);
+            await set(powerSavingRef, newValue);
+            setIsPowerSaving(newValue);
+            toast.success(`Power saving mode ${newValue ? 'enabled' : 'disabled'}`, {
+                position: 'top-center',
+                autoClose: 2000,
+                pauseOnHover: false
+            });
+        } catch (error) {
+            console.error("Error updating power saving mode:", error);
+            toast.error("Failed to update power saving mode", {
+                position: 'bottom-center',
+                autoClose: 2000
+            });
+        }
+    };
+
     const averages = calculateAverages();
 
     return (
@@ -1352,6 +1390,19 @@ const UserHome = () => {
                                                         </option>
                                                     ))}
                                                 </select>
+                                            </div>
+                                            
+                                            <div className="power-saving-toggle">
+                                                <label className="toggle-switch">
+                                                    <input 
+                                                        type="checkbox" 
+                                                        checked={isPowerSaving} 
+                                                        onChange={handlePowerSavingToggle}
+                                                        disabled={!selectedDevice} 
+                                                    />
+                                                    <span className="toggle-slider"></span>
+                                                    <span className="toggle-label">Power Saving</span>
+                                                </label>
                                             </div>
                                         </div>
                                         <div className='chart-area'>
