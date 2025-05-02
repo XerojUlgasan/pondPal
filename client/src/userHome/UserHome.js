@@ -1393,6 +1393,7 @@ const UserHome = () => {
                                             </div>
                                             
                                             <div className="power-saving-toggle">
+                                                <span className="toggle-label">Power Saving</span>
                                                 <label className="toggle-switch">
                                                     <input 
                                                         type="checkbox" 
@@ -1401,7 +1402,6 @@ const UserHome = () => {
                                                         disabled={!selectedDevice} 
                                                     />
                                                     <span className="toggle-slider"></span>
-                                                    <span className="toggle-label">Power Saving</span>
                                                 </label>
                                             </div>
                                         </div>

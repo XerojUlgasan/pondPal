@@ -1974,6 +1974,8 @@
 .power-saving-toggle {
     display: flex;
     align-items: center;
+    justify-content: center;
+    flex-direction: column;
 }
 
 .toggle-switch {
@@ -2028,7 +2030,7 @@ input:checked + .toggle-slider:before {
 }
 
 .toggle-label {
-    margin-left: 60px;
-    font-size: 14px;
+    font-size: 14px; 
+    text-align: center;
     white-space: nowrap;
 }
