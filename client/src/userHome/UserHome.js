@@ -873,6 +873,56 @@ useEffect(() => {
     }
 }, [selectedDevice]);
 
+// Add this useEffect after your other useEffects, near the chartData logic
+
+useEffect(() => {
+    if (!selectedDevice) return;
+
+    let recordsRef;
+    let unsubscribe;
+
+    // Listen for changes based on the selected time period
+    if (timePeriod === 'daily') {
+        const currDate = new Date(selectedDate || Date.now()).toISOString().split('T')[0];
+        recordsRef = ref(database, `/devices/${selectedDevice}/records/${currDate}`);
+        unsubscribe = onValue(recordsRef, () => {
+            fetchData(); // fetchData already updates chartData
+        });
+    } else if (timePeriod === 'weekly' || timePeriod === 'monthly') {
+        // Listen to the whole records node for the device
+        recordsRef = ref(database, `/devices/${selectedDevice}/records`);
+        unsubscribe = onValue(recordsRef, () => {
+            fetchData();
+        });
+    } else if (timePeriod === 'custom') {
+        const customDate = selectedDate;
+        recordsRef = ref(database, `/devices/${selectedDevice}/records/${customDate}`);
+        unsubscribe = onValue(recordsRef, () => {
+            fetchData();
+        });
+    }
+
+    // Cleanup listener on unmount or when dependencies change
+    return () => {
+        if (unsubscribe) unsubscribe();
+    };
+}, [selectedDevice, timePeriod, selectedDate]);
+
+useEffect(() => {
+    if (!selectedDevice) return;
+
+    const thresholdRef = ref(database, `/devices/${selectedDevice}/threshold/isEnabled`);
+    // Listen for real-time changes to isEnabled
+    const unsubscribe = onValue(thresholdRef, (snapshot) => {
+        if (snapshot.exists()) {
+            setIsThresholdEnabled(snapshot.val());
+        }
+    });
+
+    // Cleanup listener on unmount or device change
+    return () => unsubscribe();
+}, [selectedDevice]);
+
     return (
         <div className="userHome">
             <div className='above-nav'>
@@ -1082,7 +1132,20 @@ useEffect(() => {
                                             </div>
                                             <div className='stat-item'>
                                                 <span className='stat-label'>Water Level</span>
-                                                <span className='stat-value'>{device.sensors?.watlvl.toFixed(1)}%</span>
+                                                <span className='stat-value'>
+                                                    {(() => {
+                                                        const threshold = device.threshold;
+                                                        const isThresholdEnabled = threshold?.isEnabled;
+                                                        const value = device.sensors?.watlvl?.toFixed(1);
+
+                                                        // Show cm when threshold is disabled or doesn't exist
+                                                        if (!threshold || isThresholdEnabled === false) {
+                                                            return `${value} cm`;
+                                                        } else {
+                                                            return `${value}%`;
+                                                        }
+                                                    })()}
+                                                </span>
                                             </div>
                                         </div>
                                         
@@ -1207,7 +1270,7 @@ useEffect(() => {
                                                 </div>
                                                 <div className="input-group">
                                                     <label>Maximum</label>
-                                                    <input type="number" step="0.1" min="1" defaultValue={device.threshold?.ph?.max || "8.0"} />
+                                                    <input type="number" step="0.1" min="1" defaultValue={device.threshold?.ph?.max || "8.5"} />
                                                 </div>
                                             </div>
                                         </div>
@@ -1222,7 +1285,7 @@ useEffect(() => {
                                                 </div>
                                                 <div className="input-group">
                                                     <label>Maximum</label>
-                                                    <input type="number" step="0.1" min="1" defaultValue={device.threshold?.temp?.max || "28"} />
+                                                    <input type="number" step="0.1" min="1" defaultValue={device.threshold?.temp?.max || "30"} />
                                                     <span className="unit">°C</span>
                                                 </div>
                                             </div>
@@ -1234,10 +1297,11 @@ useEffect(() => {
                                                 <div className="input-group">
                                                     <label>Minimum</label>
                                                     <input type="number" min="1" defaultValue={device.threshold?.tds?.min || "150"} />
-                                                    <span className="unit">ppm</span>                                        </div>
+                                                    <span className="unit">ppm</span>                                        
+                                                </div>
                                                 <div className="input-group">
                                                     <label>Maximum</label>
-                                                    <input type="number" min="1" defaultValue={device.threshold?.tds?.max || "250"} />
+                                                    <input type="number" min="1" defaultValue={device.threshold?.tds?.max || "500"} />
                                                     <span className="unit">ppm</span>
                                                 </div>
                                             </div>
@@ -1248,12 +1312,12 @@ useEffect(() => {
                                             <div className="threshold-inputs">
                                                 <div className="input-group">
                                                     <label>Minimum</label>
-                                                    <input type="number" step="0.1" min="1" defaultValue={device.threshold?.turb?.min || "1"} />
+                                                    <input type="number" step="0.1" min="1" defaultValue={device.threshold?.turb?.min || "30"} />
                                                     <span className="unit">NTU</span>
                                                 </div>
                                                 <div className="input-group">
                                                     <label>Maximum</label>
-                                                    <input type="number" step="0.1" min="1" defaultValue={device.threshold?.turb?.max || "20"} />
+                                                    <input type="number" step="0.1" min="1" defaultValue={device.threshold?.turb?.max || "100"} />
                                                     <span className="unit">NTU</span>
                                                 </div>
                                             </div>
@@ -1277,7 +1341,7 @@ useEffect(() => {
                                                 <div className="input-group full-width">
                                                     <label>Depth</label>
                                                     <input type="number" min="0.5" defaultValue={device.threshold?.watlvl?.depth || "1"} />
-                                                    <span className="unit">Meters</span>
+                                                    <span className="unit">cm</span>
                                                 </div>
                                             </div>
                                         </div>
