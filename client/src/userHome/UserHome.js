@@ -42,8 +42,8 @@ const getSensorName = (type) => {
         case 'ph': return 'pH';
         case 'temp': return 'Temperature';
         case 'tds': return 'TDS';
-        case 'turbidity': return 'Turbidity';
-        case 'waterLevel': return 'Water Level';
+        case 'turb': return 'Turbidity';
+        case 'watlvl': return 'Water Level';
         default: return type;
     }
 };
@@ -121,6 +121,9 @@ const UserHome = () => {
     // Add this state to track power saving mode
     const [isPowerSaving, setIsPowerSaving] = useState(false);
 
+    // Add this state to track threshold enable/disable
+    const [isThresholdEnabled, setIsThresholdEnabled] = useState(true);
+
     // Handler for sensor selection change
     const handleSensorChange = (e) => {
         setSelectedSensor(e.target.value);
@@ -158,7 +161,6 @@ const UserHome = () => {
         }
 
         if(item === 'analysis'){
-            console.log('annalysis clicked', userInfo)
             if(userInfo?.devices.length === 0) {
                 toast.error('You have no devices yet.', {position: 'bottom-center', pauseOnHover: false, autoClose: 2000})
             }
@@ -169,7 +171,6 @@ const UserHome = () => {
         if(userInfo?.devices){
             const index = userInfo.devices.findIndex(dev => dev.devId === e.currentTarget.dataset.value)
             setDevice(userInfo.devices[index])
-            console.log(index)
         }
         setDeviceToManage(e.currentTarget.dataset.value);
         setDevicesPopUp('manage');
@@ -279,29 +280,6 @@ const UserHome = () => {
                 return
             }
 
-            // //REGISTERING CURRENT USER TO THE DEVICE'S USERS
-            // const deviceUserRef = ref(database, `/devices/${deviceInfo.deviceId}/users`)
-            // const uniqueKey = await push(deviceUserRef, userInfo?.username)
-            // console.log('User is registered to the device successfully!')
-
-            // //ADDING DEVICE TO USER'S DEVICE
-            // const userDevicesRef = ref(database, `/user/${userInfo?.userId}/devices`)
-            // push(userDevicesRef, {
-            //                         deviceId: deviceInfo.deviceId,
-            //                         deviceName: deviceInfo.deviceName
-            //                     })
-            // console.log('Device is registered to the user successfully!')
-
-            // console.log('Updating user info...')
-
-            // setUserInfo(prev => ({
-            //     ...prev,
-            //     devices: [...prev.devices, {
-            //                                 deviceId: deviceInfo.deviceId,
-            //                                 deviceName: deviceInfo.deviceName
-            //                                 }]
-            // }))
-
             const newDevice = {
                 devName: deviceInfo.deviceName,
                 devId: deviceInfo.deviceId
@@ -329,7 +307,7 @@ const UserHome = () => {
                     toast.success('Device Added Successfully', {position: 'top-center', autoClose: 2000, pauseOnHover: false})
                 })
                 .catch(e => {
-                    console.log(e)
+                    toast.error('Error Occured', {position: 'bottom-center', autoClose: 2000, pauseOnHover: false})
                 })   
             }
 
@@ -358,7 +336,7 @@ const UserHome = () => {
         { value: 'all', label: 'All Sensors' },
         { value: 'ph', label: 'pH Sensor' },
         { value: 'temp', label: 'Temperature Sensor' },
-        { value: 'dissolved solids', label: 'TSD Sensor' },
+        { value: 'dissolved solids', label: 'TDS Sensor' },
         { value: 'turbidity', label: 'Turbidity Sensor' },
         { value: 'water level', label: 'Water Level' }
     ];
@@ -471,9 +449,7 @@ const UserHome = () => {
                         return (timeA[0] * 60 + timeA[1]) - (timeB[0] * 60 + timeB[1]);
                     });
     
-                    console.log(data)
                 } else{
-                    console.log(`No data for ${currDate}`)
                     toast.info(`No data found for today (${currDate})`, {
                         position: 'bottom-center', 
                         autoClose: 2000,
@@ -625,10 +601,8 @@ const UserHome = () => {
                         const timeB = b.date.split(':').map(Number);
                         return (timeA[0] * 60 + timeA[1]) - (timeB[0] * 60 + timeB[1]);
                     });
-                    
-                    console.log(data);
+
                 } else {
-                    console.log(`No data for ${formattedDate}`);
                     toast.info(`No records found for ${formattedDate}`, {
                         position: 'bottom-center', 
                         autoClose: 2000,
@@ -643,7 +617,7 @@ const UserHome = () => {
             }
         }
 
-        console.log(data)
+
         return data;
     };
 
@@ -656,8 +630,7 @@ const UserHome = () => {
                 const data = userData.data()
         
                 setUserInfo(data)
-                console.log('User Logged in', user)
-                console.log(userInfo)
+
             }else {
                 toast.error('Signed Out', {position: 'bottom-center', autoClose: 2000, pauseOnHover: false, pauseOnHover: false})
                 navigate('/')
@@ -704,7 +677,7 @@ const UserHome = () => {
                             devices: updatedDevices
                         };
                     });
-                    console.log(userInfo)
+
                 })
                 unsubscribes.push(unsubscribe);
             })
@@ -719,7 +692,6 @@ const UserHome = () => {
     useEffect(() => {
         const interval = setInterval(() => {
         setRefreshTime(Date.now());
-            console.log('refresh')
         }, 60000); 
         return () => clearInterval(interval);
     }, []);
@@ -786,10 +758,6 @@ const UserHome = () => {
     }, [userInfo?.devices?.length])
 
     useEffect(() => {
-        console.log(notifs)
-    }, [notifs])
-
-    useEffect(() => {
         if (userInfo?.devices && userInfo.devices.length > 0) {
             if (!selectedDevice || !userInfo.devices.some(d => d.devId === selectedDevice)) {
                 // If no device is selected or the selected device was removed, select the first one
@@ -848,7 +816,62 @@ const UserHome = () => {
         }
     };
 
+    // Add this function to handle threshold enable toggle
+    const handleThresholdEnableToggle = async () => {
+        try {
+            const newValue = !isThresholdEnabled;
+            setIsThresholdEnabled(newValue);
+            toast.success(`Threshold notifications ${newValue ? 'enabled' : 'disabled'}`, {
+                position: 'top-center',
+                autoClose: 2000,
+                pauseOnHover: false
+            });
+        } catch (error) {
+            console.error("Error updating threshold enable state:", error);
+            toast.error("Failed to update threshold enable state", {
+                position: 'bottom-center',
+                autoClose: 2000
+            });
+        }
+    };
+
     const averages = calculateAverages();
+
+    // Add this useEffect after your state declarations and before your return statement
+
+useEffect(() => {
+    if (deviceToManage && devicesPopUp === 'manage') {
+        // Fetch the threshold object for the selected device
+        const thresholdRef = ref(database, `/devices/${deviceToManage}/threshold`);
+        get(thresholdRef).then((snapshot) => {
+            const data = snapshot.val();
+            // If threshold exists and isEnabled is true, check the box; otherwise, uncheck
+            if (data && typeof data.isEnabled === 'boolean') {
+                setIsThresholdEnabled(data.isEnabled);
+            } else {
+                setIsThresholdEnabled(false); // Default to unchecked if not set
+            }
+        }).catch(() => {
+            setIsThresholdEnabled(false); // On error, default to unchecked
+        });
+    }
+}, [deviceToManage, devicesPopUp]);
+
+// Add this useEffect after your other useEffects, near the power saving logic
+
+useEffect(() => {
+    if (selectedDevice) {
+        const powerSavingRef = ref(database, `/devices/${selectedDevice}/isPowerSaving`);
+        // Listen for real-time changes
+        const unsubscribe = onValue(powerSavingRef, (snapshot) => {
+            if (snapshot.exists()) {
+                setIsPowerSaving(snapshot.val());
+            }
+        });
+        // Cleanup listener on unmount or device change
+        return () => unsubscribe();
+    }
+}, [selectedDevice]);
 
     return (
         <div className="userHome">
@@ -1141,7 +1164,7 @@ const UserHome = () => {
                     </div>
 
                     {/* manage POP UP */}
-                    {(devicesPopUp === 'manage') && ( //refer to deviceToManage for the chosen device name
+                    {(devicesPopUp === 'manage') && ( 
                         <div className="popup-overlay">
                             <div className="threshold-popup">
                                 <div className="popup-header">
@@ -1157,137 +1180,174 @@ const UserHome = () => {
                                     </span>
                                 </div>
                                 
-                                <div className="threshold-form">
-                                    <div className="threshold-group">
-                                        <h3>pH Level</h3>
-                                        <div className="threshold-inputs">
-                                            <div className="input-group">
-                                                <label>Minimum</label>
-                                                <input type="number" step="0.1" min="1" defaultValue={device.threshold?.ph.min || "6.5"} />
-                                            </div>
-                                            <div className="input-group">
-                                                <label>Maximum</label>
-                                                <input type="number" step="0.1" min="1" defaultValue={device.threshold?.ph.max || "8.0"} />
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div className="threshold-group">
-                                        <h3>Temperature</h3>
-                                        <div className="threshold-inputs">
-                                            <div className="input-group">
-                                                <label>Minimum</label>
-                                                <input type="number" step="0.1" min="1" defaultValue={device.threshold?.temp.min || "20"} />
-                                                <span className="unit">°C</span>
-                                            </div>
-                                            <div className="input-group">
-                                                <label>Maximum</label>
-                                                <input type="number" step="0.1" min="1" defaultValue={device.threshold?.temp.max || "28"} />
-                                                <span className="unit">°C</span>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div className="threshold-group">
-                                        <h3>TDS</h3>
-                                        <div className="threshold-inputs">
-                                            <div className="input-group">
-                                                <label>Minimum</label>
-                                                <input type="number" min="1" defaultValue={device.threshold?.tds.min || "150"} />
-                                                <span className="unit">ppm</span>
-                                            </div>
-                                            <div className="input-group">
-                                                <label>Maximum</label>
-                                                <input type="number" min="1" defaultValue={device.threshold?.tds.max || "250"} />
-                                                <span className="unit">ppm</span>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div className="threshold-group">
-                                        <h3>Turbidity</h3>
-                                        <div className="threshold-inputs">
-                                            <div className="input-group">
-                                                <label>Minimum</label>
-                                                <input type="number" step="0.1" min="1" defaultValue={device.threshold?.turb.min || "1"} />
-                                                <span className="unit">NTU</span>
-                                            </div>
-                                            <div className="input-group">
-                                                <label>Maximum</label>
-                                                <input type="number" step="0.1" min="1" defaultValue={device.threshold?.turb.max || "20"} />
-                                                <span className="unit">NTU</span>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div className="threshold-group">
-                                        <h3>Water Level</h3>
-                                        <div className="threshold-inputs">
-                                            <div className="input-group">
-                                                <label>Minimum</label>
-                                                <input type="number" min="1" defaultValue={device.threshold?.watlvl.min || "70"} />
-                                                <span className="unit">%</span>
-                                            </div>
-                                            <div className="input-group">
-                                                <label>Maximum</label>
-                                                <input type="number" min="1" defaultValue={device.threshold?.watlvl.max || "100"} />
-                                                <span className="unit">%</span>
-                                            </div>
-                                        </div>
-                                        <div className="threshold-inputs single-input">
-                                            <div className="input-group full-width">
-                                                <label>Depth</label>
-                                                <input type="number" min="0.5" defaultValue={device.threshold?.watlvl.depth || "1"} />
-                                                <span className="unit">Meters</span>
-                                            </div>
-                                        </div>
-                                    </div>
+                                <div className="threshold-enable-toggle">
+                                    <label className="toggle-container">
+                                        <input 
+                                            type="checkbox" 
+                                            checked={isThresholdEnabled}
+                                            onChange={handleThresholdEnableToggle}
+                                        />
+                                        <span className="toggle-text">Enable Thresholds</span>
+                                    </label>
+                                    <p className="threshold-status-text">
+                                        {isThresholdEnabled 
+                                            ? "Threshold notifications are enabled. Device will alert when values are outside safe range." 
+                                            : "Threshold notifications are disabled. No alerts will be sent for this device."}
+                                    </p>
                                 </div>
+                                
+                                {isThresholdEnabled && (
+                                    <div className="threshold-form">
+                                        <div className="threshold-group">
+                                            <h3>pH Level</h3>
+                                            <div className="threshold-inputs">
+                                                <div className="input-group">
+                                                    <label>Minimum</label>
+                                                    <input type="number" step="0.1" min="1" defaultValue={device.threshold?.ph?.min || "6.5"} />
+                                                </div>
+                                                <div className="input-group">
+                                                    <label>Maximum</label>
+                                                    <input type="number" step="0.1" min="1" defaultValue={device.threshold?.ph?.max || "8.0"} />
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="threshold-group">
+                                            <h3>Temperature</h3>
+                                            <div className="threshold-inputs">
+                                                <div className="input-group">
+                                                    <label>Minimum</label>
+                                                    <input type="number" step="0.1" min="1" defaultValue={device.threshold?.temp?.min || "20"} />
+                                                    <span className="unit">°C</span>
+                                                </div>
+                                                <div className="input-group">
+                                                    <label>Maximum</label>
+                                                    <input type="number" step="0.1" min="1" defaultValue={device.threshold?.temp?.max || "28"} />
+                                                    <span className="unit">°C</span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="threshold-group">
+                                            <h3>TDS</h3>
+                                            <div className="threshold-inputs">
+                                                <div className="input-group">
+                                                    <label>Minimum</label>
+                                                    <input type="number" min="1" defaultValue={device.threshold?.tds?.min || "150"} />
+                                                    <span className="unit">ppm</span>                                        </div>
+                                                <div className="input-group">
+                                                    <label>Maximum</label>
+                                                    <input type="number" min="1" defaultValue={device.threshold?.tds?.max || "250"} />
+                                                    <span className="unit">ppm</span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="threshold-group">
+                                            <h3>Turbidity</h3>
+                                            <div className="threshold-inputs">
+                                                <div className="input-group">
+                                                    <label>Minimum</label>
+                                                    <input type="number" step="0.1" min="1" defaultValue={device.threshold?.turb?.min || "1"} />
+                                                    <span className="unit">NTU</span>
+                                                </div>
+                                                <div className="input-group">
+                                                    <label>Maximum</label>
+                                                    <input type="number" step="0.1" min="1" defaultValue={device.threshold?.turb?.max || "20"} />
+                                                    <span className="unit">NTU</span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="threshold-group">
+                                            <h3>Water Level</h3>
+                                            <div className="threshold-inputs">
+                                                <div className="input-group">
+                                                    <label>Minimum</label>
+                                                    <input type="number" min="1" defaultValue={device.threshold?.watlvl?.min || "70"} />
+                                                    <span className="unit">%</span>
+                                                </div>
+                                                <div className="input-group">
+                                                    <label>Maximum</label>
+                                                    <input type="number" min="1" defaultValue={device.threshold?.watlvl?.max || "100"} />
+                                                    <span className="unit">%</span>
+                                                </div>
+                                            </div>
+                                            <div className="threshold-inputs single-input">
+                                                <div className="input-group full-width">
+                                                    <label>Depth</label>
+                                                    <input type="number" min="0.5" defaultValue={device.threshold?.watlvl?.depth || "1"} />
+                                                    <span className="unit">Meters</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
                                 
                                 <div className="popup-actions">
                                     <button className="action-btn delete-btn" onClick={() => setDevicesPopUp('')}>Cancel</button>
                                     <button className="action-btn manage-btn" onClick={async () => {
                                         try {
-                                            // Get all form inputs by their labels rather than indexes
-                                            const newThresholds = {
-                                                ph: { 
-                                                    min: parseFloat(document.querySelector('.threshold-group:nth-child(1) .input-group:nth-child(1) input').value),
-                                                    max: parseFloat(document.querySelector('.threshold-group:nth-child(1) .input-group:nth-child(2) input').value)
-                                                },
-                                                temp: { 
-                                                    min: parseFloat(document.querySelector('.threshold-group:nth-child(2) .input-group:nth-child(1) input').value),
-                                                    max: parseFloat(document.querySelector('.threshold-group:nth-child(2) .input-group:nth-child(2) input').value)
-                                                },
-                                                tds: { 
-                                                    min: parseFloat(document.querySelector('.threshold-group:nth-child(3) .input-group:nth-child(1) input').value),
-                                                    max: parseFloat(document.querySelector('.threshold-group:nth-child(3) .input-group:nth-child(2) input').value)
-                                                },
-                                                turb: { 
-                                                    min: parseFloat(document.querySelector('.threshold-group:nth-child(4) .input-group:nth-child(1) input').value),
-                                                    max: parseFloat(document.querySelector('.threshold-group:nth-child(4) .input-group:nth-child(2) input').value)
-                                                },
-                                                watlvl: { 
-                                                    min: parseFloat(document.querySelector('.threshold-group:nth-child(5) .input-group:nth-child(1) input').value),
-                                                    max: parseFloat(document.querySelector('.threshold-group:nth-child(5) .input-group:nth-child(2) input').value),
-                                                    depth: parseFloat(document.querySelector('.threshold-group:nth-child(5) .single-input .full-width input').value)
-                                                }
+                                            // Create a basic thresholds object with isEnabled flag
+                                            let thresholdValues = {
+                                                isEnabled: isThresholdEnabled
                                             };
                                             
-                                            // Validate thresholds - check for NaN, min > max, or values < 1
-                                            if (Object.values(newThresholds).some(sensor => 
-                                                isNaN(sensor.min) || isNaN(sensor.max) || 
-                                                sensor.min > sensor.max || 
-                                                sensor.min < 1 || sensor.max < 1)) {
-                                                throw new Error("Invalid threshold values");
-                                            }
+                                            // Only try to collect form values if the threshold form is visible/enabled
+                                            if (isThresholdEnabled) {
+                                                // Collect and validate threshold values
+                                                const formValues = {
+                                                    ph: { 
+                                                        min: parseFloat(document.querySelector('.threshold-group:nth-child(1) .input-group:nth-child(1) input').value),
+                                                        max: parseFloat(document.querySelector('.threshold-group:nth-child(1) .input-group:nth-child(2) input').value)
+                                                    },
+                                                    temp: { 
+                                                        min: parseFloat(document.querySelector('.threshold-group:nth-child(2) .input-group:nth-child(1) input').value),
+                                                        max: parseFloat(document.querySelector('.threshold-group:nth-child(2) .input-group:nth-child(2) input').value)
+                                                    },
+                                                    tds: { 
+                                                        min: parseFloat(document.querySelector('.threshold-group:nth-child(3) .input-group:nth-child(1) input').value),
+                                                        max: parseFloat(document.querySelector('.threshold-group:nth-child(3) .input-group:nth-child(2) input').value)
+                                                    },
+                                                    turb: { 
+                                                        min: parseFloat(document.querySelector('.threshold-group:nth-child(4) .input-group:nth-child(1) input').value),
+                                                        max: parseFloat(document.querySelector('.threshold-group:nth-child(4) .input-group:nth-child(2) input').value)
+                                                    },
+                                                    watlvl: { 
+                                                        min: parseFloat(document.querySelector('.threshold-group:nth-child(5) .input-group:nth-child(1) input').value),
+                                                        max: parseFloat(document.querySelector('.threshold-group:nth-child(5) .input-group:nth-child(2) input').value),
+                                                        depth: parseFloat(document.querySelector('.threshold-group:nth-child(5) .single-input .full-width input').value)
+                                                    }
+                                                };
+                                                
+                                                // Validate the thresholds
+                                                if (Object.values(formValues).some(sensor => 
+                                                    (isNaN(sensor.min) || isNaN(sensor.max) || 
+                                                    sensor.min > sensor.max || 
+                                                    sensor.min < 1 || sensor.max < 1))) {
+                                                    throw new Error("Invalid threshold values");
+                                                }
 
-                                            if(newThresholds.watlvl.depth < 0.5){
-                                                throw new Error("watlvl");
+                                                if(formValues.watlvl.depth < 0.5){
+                                                    throw new Error("watlvl");
+                                                }
+                                                
+                                                // If validation passes, merge with the thresholdValues
+                                                thresholdValues = {
+                                                    ...formValues,
+                                                    isEnabled: isThresholdEnabled
+                                                };
+                                            } else {
+                                                // If thresholds are disabled, use the device's existing threshold values
+                                                thresholdValues = {
+                                                    ...device.threshold,
+                                                    isEnabled: false
+                                                };
                                             }
                                             
-                                            const deviceRef = ref(database, `/devices/${deviceToManage}/threshold`)
-                                            await set(deviceRef, newThresholds)
-                                            toast.success('Threshold Updated', {position: 'top-center', autoClose: 2000, pauseOnHover: false})
+                                            const deviceRef = ref(database, `/devices/${deviceToManage}/threshold`);
+                                            await set(deviceRef, thresholdValues);
+                                            toast.success('Settings Updated', {position: 'top-center', autoClose: 2000, pauseOnHover: false});
                                             
                                             // Close popup
                                             setDevicesPopUp('');
@@ -1299,10 +1359,8 @@ const UserHome = () => {
 
                                             console.error("Error updating thresholds:", error);
                                             toast.error('Error: Ensure all values are at least 1 and maximum values are greater than minimum values', {position: 'bottom-center', autoClose: 3000, pauseOnHover: false})
-                                        
-                                        
                                         }
-                                    }}>Save Thresholds</button>
+                                    }}>Save Settings</button>
                                 </div>
                             </div>
                         </div>
@@ -1560,7 +1618,7 @@ const UserHome = () => {
                                                     const config = getSensorConfig(sensor);
                                                     return (
                                                         <div className="average-item" key={sensor}>
-                                                            <div className="average-icon" style={{ backgroundColor: config.color }}></div>
+                                                            <div className="average-icon    " style={{ backgroundColor: config.color }}></div>
                                                             <div className="average-details">
                                                                 <span className="average-name">{getSensorName(sensor)}</span>
                                                                 <span className="average-value">{averages[sensor].toFixed(1)} {config.unit}</span>
