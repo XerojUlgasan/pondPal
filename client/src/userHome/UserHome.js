@@ -31,12 +31,19 @@ const TOAST_DEBOUNCE_MS = 1000;
 
 // Define getSensorConfig outside both components so it can be used by CustomTooltip
 const getSensorConfig = (type) => {
-    switch(type) {
-        case 'ph': return { color: '#6366F1', unit: 'pH' };         // Modern indigo
-        case 'temp': return { color: '#F97316', unit: '°C' };       // Modern orange
-        case 'tds': return { color: '#10B981', unit: 'ppm' };       // Modern emerald
-        case 'turbidity': return { color: '#0EA5E9', unit: 'NTU' }; // Modern sky blue
-        case 'waterLevel': return { color: '#8B5CF6', unit: '%' };  // Modern purple
+    // Normalize the type to handle different formats
+    const normalizedType = type.toLowerCase().replace(/\s+/g, '');
+    
+    switch(normalizedType) {
+        case 'ph': return { color: '#FF5733', unit: '' }; // Bright red-orange
+        case 'temp': 
+        case 'temperature': return { color: '#FFC300', unit: '°C' }; // Bright yellow
+        case 'tds': 
+        case 'dissolvedsolids': return { color: '#36A2EB', unit: 'ppm' }; // Bright blue
+        case 'turb': 
+        case 'turbidity': return { color: '#4BC0C0', unit: 'NTU' }; // Teal
+        case 'watlvl': 
+        case 'waterlevel': return { color: '#9966FF', unit: '%' }; // Bright purple
         default: return { color: '#6366F1', unit: '' };
     }
 };
@@ -1806,7 +1813,7 @@ useEffect(() => {
                                                             type="monotone" 
                                                             dataKey="temp" 
                                                             name="Temperature" 
-                                                            stroke={getSensorConfig('temp').color}
+                                                            stroke={getSensorConfig('temperature').color}
                                                             strokeWidth={1.5}
                                                             dot={false}
                                                             activeDot={{ r: 6, strokeWidth: 0 }}
@@ -1905,10 +1912,20 @@ useEffect(() => {
                                             <h3>Average Sensor Values</h3>
                                             <div className="averages-container">
                                                 {Object.keys(averages).map(sensor => {
-                                                    const config = getSensorConfig(sensor);
+                                                    // Map the sensor name to its standardized form
+                                                    const sensorMapping = {
+                                                        'ph': 'ph',
+                                                        'temp': 'temperature',
+                                                        'tds': 'tds',
+                                                        'turb': 'turbidity',
+                                                        'watlvl': 'waterLevel'
+                                                    };
+                                                    const standardizedSensor = sensorMapping[sensor] || sensor;
+                                                    const config = getSensorConfig(standardizedSensor);
+                                                    
                                                     return (
                                                         <div className="average-item" key={sensor}>
-                                                            <div className="average-icon    " style={{ backgroundColor: config.color }}></div>
+                                                            <div className="average-icon" style={{ backgroundColor: config.color }}></div>
                                                             <div className="average-details">
                                                                 <span className="average-name">{getSensorName(sensor)}</span>
                                                                 <span className="average-value">{averages[sensor].toFixed(1)} {config.unit}</span>

@@ -12,6 +12,7 @@ import enzo from './enzo.jpg'
 import notarion from './notarion.jpg'
 
 import us from './us.jpg'
+import cat from './catch.jpg'
 
 
 const AboutUs = () => {
@@ -39,7 +40,7 @@ const AboutUs = () => {
                 </div>
             
                 <div className="about-row reverse">
-                <img src="catch.png" alt="Catch" className="about-img" />
+                <img src={cat} alt="Catch" className="about-img" />
                 <div className="about-text-block">
                     <h2 className="about-subtitle">OUR <span className="highlight">MISSION</span></h2>
                     <p className="about-text">
