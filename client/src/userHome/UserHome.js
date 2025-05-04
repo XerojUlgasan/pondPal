@@ -16,6 +16,10 @@ import { sendEmailVerification } from 'firebase/auth';
 import { arrayRemove, collectionGroup, doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { toast, ToastContainer } from 'react-toastify';
 
+// Add at the top of your file
+let lastToastTime = 0;
+const TOAST_DEBOUNCE_MS = 1000;
+
 //userInfo:
 //
 //email
@@ -46,6 +50,22 @@ const getSensorName = (type) => {
         case 'watlvl': return 'Water Level';
         default: return type;
     }
+};
+
+// Add this helper function near your other helper functions at the top
+const addSettingsChangeNotification = async (deviceId, action, user = auth.currentUser.email) => {
+  try {
+    const notificationRef = ref(database, `/devices/${deviceId}/notifications`);
+    await push(notificationRef, {
+      type: 'settings',
+      action: action,
+      user: user,
+      time: Date.now().toString(),
+      isRead: false
+    });
+  } catch (error) {
+    console.error("Error adding settings change notification:", error);
+  }
 };
 
 const CustomTooltip = ({ active, payload, label }) => {
@@ -246,7 +266,7 @@ const UserHome = () => {
             const hasSameId = (userInfo.devices.findIndex(dev => dev.devId === deviceInfo.deviceId) !== -1)
     
             if(userInfo && hasSameName){
-                toast.error('Device name is already used.', {position: 'bottom-center', autoClose: 2000, pauseOnHover: false})
+                toast.error('Device name is already used.', {position: 'bottom-center', autoClose: 0, pauseOnHover: false})
                 return
             }
     
@@ -431,6 +451,20 @@ const UserHome = () => {
             
             try{
                 const snapshot = await get(devRecordRef)
+
+                // Then in your generateData() function:
+                if(!snapshot.exists()){
+                    const now = Date.now();
+                    if (now - lastToastTime > TOAST_DEBOUNCE_MS) {
+                        toast.info(`No data found for today (${currDate})`, {
+                            position: 'bottom-center', 
+                            autoClose: 2000,
+                            pauseOnHover: false
+                        });
+                        lastToastTime = now;
+                    }
+                    return [];
+                }
 
                 if(snapshot.exists()){
                     const recordData = snapshot.val()
@@ -795,32 +829,50 @@ const UserHome = () => {
         }
     }, [selectedDevice]);
 
-    // Add this function to handle power saving toggle
-    const handlePowerSavingToggle = async () => {
-        try {
-            const newValue = !isPowerSaving;
-            const powerSavingRef = ref(database, `/devices/${selectedDevice}/isPowerSaving`);
-            await set(powerSavingRef, newValue);
-            setIsPowerSaving(newValue);
-            toast.success(`Power saving mode ${newValue ? 'enabled' : 'disabled'}`, {
-                position: 'top-center',
-                autoClose: 2000,
-                pauseOnHover: false
-            });
-        } catch (error) {
-            console.error("Error updating power saving mode:", error);
-            toast.error("Failed to update power saving mode", {
-                position: 'bottom-center',
-                autoClose: 2000
-            });
-        }
-    };
+    // Update handlePowerSavingToggle function
+const handlePowerSavingToggle = async () => {
+    try {
+        const newValue = !isPowerSaving;
+        const powerSavingRef = ref(database, `/devices/${selectedDevice}/isPowerSaving`);
+        await set(powerSavingRef, newValue);
+        setIsPowerSaving(newValue);
+        
+        // Add notification for this change
+        await addSettingsChangeNotification(
+            selectedDevice, 
+            `Power saving mode ${newValue ? 'enabled' : 'disabled'}`
+        );
+        
+        toast.success(`Power saving mode ${newValue ? 'enabled' : 'disabled'}`, {
+            position: 'top-center',
+            autoClose: 2000,
+            pauseOnHover: false
+        });
+    } catch (error) {
+        console.error("Error updating power saving mode:", error);
+        toast.error("Failed to update power saving mode", {
+            position: 'bottom-center',
+            autoClose: 2000
+        });
+    }
+};
 
     // Add this function to handle threshold enable toggle
     const handleThresholdEnableToggle = async () => {
         try {
             const newValue = !isThresholdEnabled;
             setIsThresholdEnabled(newValue);
+            
+            // Also update in the database
+            const thresholdRef = ref(database, `/devices/${deviceToManage}/threshold/isEnabled`);
+            await set(thresholdRef, newValue);
+            
+            // Add notification for this change
+            await addSettingsChangeNotification(
+                deviceToManage,
+                `Threshold notifications ${newValue ? 'enabled' : 'disabled'}`
+            );
+            
             toast.success(`Threshold notifications ${newValue ? 'enabled' : 'disabled'}`, {
                 position: 'top-center',
                 autoClose: 2000,
@@ -923,6 +975,14 @@ useEffect(() => {
     return () => unsubscribe();
 }, [selectedDevice]);
 
+useEffect(() => {
+    // Don't need to call fetchData() here as the listener will handle it
+    // Just make sure charts are cleared when devices change
+    if (activeItem === 'analysis' && userInfo?.devices?.length === 0) {
+        setChartData([]);
+    }
+}, [selectedSensor, timePeriod, selectedDevice, selectedDate, activeItem, userInfo?.devices?.length]);
+
     return (
         <div className="userHome">
             <div className='above-nav'>
@@ -962,11 +1022,34 @@ useEffect(() => {
                       </div>
                     ) : (
                       notifs.map((notification) => {
+                        // Handle settings notifications differently
+                        if (notification.type === 'settings') {
+                            return (
+                                <div key={notification.id} className="notification-item info">
+                                    <div className="notification-icon-wrapper">
+                                        <div className="notification-icon">⚙️</div>
+                                    </div>
+                                    <div className="notification-content">
+                                        <div className="notification-top-row">
+                                            <span className="notification-title">Settings Changed</span>
+                                            <span className="notification-time">{formatNotificationTime(parseInt(notification.time))}</span>
+                                        </div>
+                                        <p className="notification-message">{notification.action}</p>
+                                        <div className="notification-footer">
+                                            <span className="notification-device">{notification.name}</span>
+                                            <span className="notification-user">{notification.user || 'Unknown user'}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        }
+
+                        // For regular sensor notifications, use the existing code
                         const notificationType = getNotificationType(
-                          notification.sensor,
-                          notification.sensorVal,
-                          notification.min,
-                          notification.max
+                            notification.sensor,
+                            notification.sensorVal,
+                            notification.min,
+                            notification.max
                         );
                         
                         let title = '';
@@ -1411,6 +1494,13 @@ useEffect(() => {
                                             
                                             const deviceRef = ref(database, `/devices/${deviceToManage}/threshold`);
                                             await set(deviceRef, thresholdValues);
+                                            
+                                            // Add notification about threshold changes
+                                            await addSettingsChangeNotification(
+                                                deviceToManage,
+                                                `Device threshold settings updated`
+                                            );
+                                            
                                             toast.success('Settings Updated', {position: 'top-center', autoClose: 2000, pauseOnHover: false});
                                             
                                             // Close popup
@@ -1710,7 +1800,8 @@ useEffect(() => {
                                                     <option value="all">All Notifications</option>
                                                     <option value="warning">Warnings</option>
                                                     <option value="critical">Critical Alerts</option>
-                                                    <option value="info">Normal Range</option>
+                                                    <option value="info">Normal Range & Settings</option>
+                                                    <option value="settings">Settings Changes Only</option>
                                                 </select>
                                             </div>
                                         </div>
@@ -1732,7 +1823,15 @@ useEffect(() => {
                                                         // First filter by device
                                                         const deviceMatch = notification.name === selectedDeviceName;
                                                         
-                                                        // Then apply notification type filter
+                                                        // For settings notifications, handle differently
+                                                        if (notification.type === 'settings') {
+                                                            if (notificationFilter === 'settings') {
+                                                                return deviceMatch;  // Only show settings notifications when "Settings Changes Only" is selected
+                                                            }
+                                                            return deviceMatch && (notificationFilter === 'all' || notificationFilter === 'info');
+                                                        }
+
+                                                        // For sensor notifications, use existing filtering
                                                         if (notificationFilter === 'all') {
                                                             return deviceMatch;
                                                         } else {
@@ -1746,6 +1845,29 @@ useEffect(() => {
                                                         }
                                                     })
                                                     .map((notification) => {
+                                                        // Handle settings notifications differently
+                                                        if (notification.type === 'settings') {
+                                                            return (
+                                                                <div key={notification.id} className="notification-item info">
+                                                                    <div className="notification-icon-wrapper">
+                                                                        <div className="notification-icon">⚙️</div>
+                                                                    </div>
+                                                                    <div className="notification-content">
+                                                                        <div className="notification-top-row">
+                                                                            <span className="notification-title">Settings Changed</span>
+                                                                            <span className="notification-time">{formatNotificationTime(parseInt(notification.time))}</span>
+                                                                        </div>
+                                                                        <p className="notification-message">{notification.action}</p>
+                                                                        <div className="notification-footer">
+                                                                            <span className="notification-device">{notification.name}</span>
+                                                                            <span className="notification-user">{notification.user || 'Unknown user'}</span>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            );
+                                                        }
+
+                                                        // For regular sensor notifications, use the existing code
                                                         const notificationType = getNotificationType(
                                                             notification.sensor,
                                                             notification.sensorVal,
