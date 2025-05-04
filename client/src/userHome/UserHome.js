@@ -15,6 +15,7 @@ import { Database, get, limitToFirst, limitToLast, onValue, orderByChild, push, 
 import { sendEmailVerification } from 'firebase/auth';
 import { arrayRemove, collectionGroup, doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { toast, ToastContainer } from 'react-toastify';
+import axios from 'axios';
 
 // Add at the top of your file
 let lastToastTime = 0;
@@ -67,6 +68,123 @@ const addSettingsChangeNotification = async (deviceId, action, user = auth.curre
     console.error("Error adding settings change notification:", error);
   }
 };
+
+// Add this near your other helper functions at the top of your file
+
+function getAISuggestion(sensors, thresholds = null) {
+  // Create default thresholds if none provided
+  const defaultThresholds = {
+    ph: { min: 6.5, max: 8.5 },
+    temp: { min: 20, max: 30 },
+    tds: { min: 150, max: 500 },
+    turb: { min: 30, max: 100 },
+    watlvl: { min: 70, max: 100 }
+  };
+  
+  // Use provided thresholds or defaults
+  const t = thresholds || defaultThresholds;
+  
+  // Initialize results
+  const issues = [];
+  let severity = "healthy"; // "healthy", "attention", "warning", "critical"
+  
+  // pH analysis
+  if (sensors.ph < t.ph.min - 1.0) {
+    issues.push("Critical: pH is extremely low. Perform immediate 30% water change and add limestone or pH buffer.");
+    severity = "critical";
+  } else if (sensors.ph < t.ph.min - 0.5) {
+    issues.push("Warning: pH is too low. Add limestone or pH buffer to raise pH levels.");
+    severity = severity === "healthy" ? "warning" : severity;
+  } else if (sensors.ph < t.ph.min) {
+    issues.push("pH is slightly below ideal range. Consider adding a small amount of pH buffer.");
+    severity = severity === "healthy" ? "attention" : severity;
+  } else if (sensors.ph > t.ph.max + 1.0) {
+    issues.push("Critical: pH is extremely high. Perform immediate 30% water change to reduce pH.");
+    severity = "critical";
+  } else if (sensors.ph > t.ph.max + 0.5) {
+    issues.push("Warning: pH is too high. Perform a partial water change to reduce pH.");
+    severity = severity === "healthy" ? "warning" : severity;
+  } else if (sensors.ph > t.ph.max) {
+    issues.push("pH is slightly above ideal range. Consider a small water change.");
+    severity = severity === "healthy" ? "attention" : severity;
+  }
+  
+  // Temperature analysis
+  if (sensors.temp < t.temp.min - 3) {
+    issues.push("Critical: Water temperature is dangerously low. Install a heater immediately.");
+    severity = "critical";
+  } else if (sensors.temp < t.temp.min) {
+    issues.push("Water temperature is below ideal range. Consider adding a heater.");
+    severity = severity === "healthy" ? "attention" : severity;
+  } else if (sensors.temp > t.temp.max + 3) {
+    issues.push("Critical: Water temperature is dangerously high. Add shade, increase aeration, and consider cooling methods.");
+    severity = "critical";
+  } else if (sensors.temp > t.temp.max) {
+    issues.push("Water temperature is above ideal range. Add shade or increase aeration.");
+    severity = severity === "healthy" ? "attention" : severity;
+  }
+  
+  // TDS analysis
+  if (sensors.tds < t.tds.min - 50) {
+    issues.push("TDS is very low. Consider adding minerals or supplements to increase water hardness.");
+    severity = severity === "healthy" ? "attention" : severity;
+  } else if (sensors.tds > t.tds.max + 200) {
+    issues.push("Critical: TDS is extremely high. Perform a large water change and check for contaminants.");
+    severity = "critical";
+  } else if (sensors.tds > t.tds.max) {
+    issues.push("TDS is high. Check feeding regimen and consider a partial water change.");
+    severity = severity === "healthy" ? "attention" : severity;
+  }
+  
+  // Turbidity analysis
+  if (sensors.turb > t.turb.max + 50) {
+    issues.push("Critical: Water is extremely cloudy. Clean filters, reduce feeding, and perform water change.");
+    severity = "critical";
+  } else if (sensors.turb > t.turb.max) {
+    issues.push("Water turbidity is high. Check and clean filtration system.");
+    severity = severity === "healthy" ? "attention" : severity;
+  }
+  
+  // Water level analysis
+  if (sensors.watlvl < t.watlvl.min - 20) {
+    issues.push("Critical: Water level is dangerously low. Add water immediately.");
+    severity = "critical";
+  } else if (sensors.watlvl < t.watlvl.min) {
+    issues.push("Water level is below ideal range. Add water to maintain proper levels.");
+    severity = severity === "healthy" ? "attention" : severity;
+  }
+  
+  // Combined parameter analysis
+  if (sensors.ph > 8.0 && sensors.temp > 28) {
+    issues.push("Warning: High pH combined with high temperature increases ammonia toxicity risk. Monitor ammonia levels closely.");
+    severity = severity === "critical" ? severity : "warning";
+  }
+  
+  if (sensors.turb > 80 && sensors.tds > 400) {
+    issues.push("High turbidity and TDS together suggest overfeeding or poor filtration. Reduce feeding and check filters.");
+    severity = severity === "critical" ? severity : "warning";
+  }
+  
+  if (sensors.ph < 6.5 && sensors.tds < 100) {
+    issues.push("Low pH with low TDS indicates soft, acidic water. Consider adding minerals and pH buffer.");
+    severity = severity === "critical" ? severity : "warning";
+  }
+  
+  // Generate final message
+  if (issues.length === 0) {
+    return {
+      message: "All parameters are within optimal range. Your pond appears healthy!",
+      severity: "healthy",
+      issues: []
+    };
+  }
+  
+  return {
+    message: issues.join(" "),
+    severity: severity,
+    issues: issues
+  };
+}
 
 const CustomTooltip = ({ active, payload, label }) => {
   if (active && payload && payload.length) {
@@ -143,6 +261,9 @@ const UserHome = () => {
 
     // Add this state to track threshold enable/disable
     const [isThresholdEnabled, setIsThresholdEnabled] = useState(true);
+
+    // Add this with your other state declarations in the UserHome component
+    const [pondSuggestion, setPondSuggestion] = useState({ message: "Analyzing...", severity: "healthy", issues: [] });
 
     // Handler for sensor selection change
     const handleSensorChange = (e) => {
@@ -983,6 +1104,18 @@ useEffect(() => {
     }
 }, [selectedSensor, timePeriod, selectedDevice, selectedDate, activeItem, userInfo?.devices?.length]);
 
+// Add this useEffect in the UserHome component
+useEffect(() => {
+  if (activeItem === 'analysis' && selectedDevice && userInfo?.devices) {
+    const device = userInfo.devices.find(d => d.devId === selectedDevice);
+    if (device && device.sensors) {
+      // Generate suggestion based on current sensor values
+      const suggestion = getAISuggestion(device.sensors, device.threshold);
+      setPondSuggestion(suggestion);
+    }
+  }
+}, [activeItem, selectedDevice, userInfo, refreshTime]);
+
     return (
         <div className="userHome">
             <div className='above-nav'>
@@ -1186,10 +1319,13 @@ useEffect(() => {
                                         <div className='device-header'>
                                             <div className='device-name-section'>
                                                 <h3>{device?.devName}</h3>
-                                                <span className={`device-status ${device?.isOnline ? (device?.isWarning ? 'warning' : 'online') : 'offline'}`}>
-                                                    <span className='status-dot'></span>
-                                                    {device?.isOnline ? (device?.isWarning ? 'Warning' : 'Online') : 'Offline'}
-                                                </span>
+                                                <div className="device-status-wrapper">
+                                                    <span className={`device-status ${device?.isOnline ? (device?.isWarning ? 'warning' : 'online') : 'offline'}`}>
+                                                        <span className='status-dot'></span>
+                                                        {device?.isOnline ? (device?.isWarning ? 'Warning' : 'Online') : 'Offline'}
+                                                    </span>
+                                                    <span className="device-id-badge">{device?.devId}</span>
+                                                </div>
                                             </div>
                                             <div className='device-icon' data-value={device?.devId} onClick={deviceAnalytics}>
                                                 <img src={analysisIcon} alt="Device icon"/>
@@ -1780,6 +1916,38 @@ useEffect(() => {
                                                         </div>
                                                     );
                                                 })}
+                                            </div>
+                                        </div>
+                                        <div className='pond-suggestions'>
+                                            <h3>Smart Pond Suggestions</h3>
+                                            <div className={`suggestion-box ${pondSuggestion.severity}`}>
+                                                <div className="suggestion-header">
+                                                    <div className="suggestion-icon">
+                                                        {pondSuggestion.severity === 'healthy' && '✓'}
+                                                        {pondSuggestion.severity === 'attention' && 'i'}
+                                                        {pondSuggestion.severity === 'warning' && '!'}
+                                                        {pondSuggestion.severity === 'critical' && '!!'}
+                                                    </div>
+                                                    <div className="suggestion-status">
+                                                        {pondSuggestion.severity === 'healthy' && 'Pond Health: Excellent'}
+                                                        {pondSuggestion.severity === 'attention' && 'Pond Health: Good - Minor Adjustments Needed'}
+                                                        {pondSuggestion.severity === 'warning' && 'Pond Health: Warning - Action Required'}
+                                                        {pondSuggestion.severity === 'critical' && 'Pond Health: Critical - Immediate Action Required'}
+                                                    </div>
+                                                </div>
+                                                <div className="suggestion-content">
+                                                    {pondSuggestion.issues && pondSuggestion.issues.length > 0 ? (
+                                                        <ul className="suggestions-list">
+                                                            {pondSuggestion.issues.map((issue, index) => (
+                                                                <li key={index} className="suggestion-item">
+                                                                    {issue}
+                                                                </li>
+                                                            ))}
+                                                        </ul>
+                                                    ) : (
+                                                        <p className="suggestion-message">{pondSuggestion.message}</p>
+                                                    )}
+                                                </div>
                                             </div>
                                         </div>
                                     </div>

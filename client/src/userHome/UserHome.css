@@ -713,7 +713,7 @@
 
 .userHome .analysis-pnl .analysis-top .analysis-left .chart-area {
     max-width: 100%;
-    max-height: 350px; /* Increased from 300px to 350px */
+    max-height: 100%; /* Increased from 300px to 350px */
     height: 100%; /* Changed from 90% to 100% */
     justify-content: center;
     align-items: center;
@@ -2065,4 +2065,275 @@ input:checked + .toggle-slider:before {
     margin-top: 8px;
     font-size: 14px;
     color: #6c757d;
+}
+
+.ai-suggestion-box {
+    background: #f3f4f6;
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 16px;
+    color: #333;
+    font-style: italic;
+}
+
+.device-status-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.device-id-badge {
+    background-color: #f0f0f0;
+    color: #666;
+    font-size: 0.8rem;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: monospace;
+}
+
+/* Add this to your CSS file */
+
+.pond-suggestions {
+  margin-bottom: 24px;
+  display: flex;
+  flex-direction: column;
+}
+
+.pond-suggestions h4 {
+  margin: 10px;
+}
+
+.suggestion-box {
+  background: #f3f8ff;
+  border-radius: 8px;
+  padding: 16px;
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.suggestion-box.healthy {
+  background-color: #e6f7ed;
+  border-left: 4px solid #10B981;
+}
+
+.suggestion-box.attention {
+  background-color: #f3f8ff;
+  border-left: 4px solid #3B82F6;
+}
+
+.suggestion-box.warning {
+  background-color: #fef7e6;
+  border-left: 4px solid #F97316;
+}
+
+.suggestion-box.critical {
+  background-color: #feecec;
+  border-left: 4px solid #EF4444;
+}
+
+.suggestion-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  flex-shrink: 0;
+}
+
+.suggestion-box.healthy .suggestion-icon {
+  background-color: #10B981;
+  color: white;
+}
+
+.suggestion-box.attention .suggestion-icon {
+  background-color: #3B82F6;
+  color: white;
+}
+
+.suggestion-box.warning .suggestion-icon {
+  background-color: #F97316;
+  color: white;
+}
+
+.suggestion-box.critical .suggestion-icon {
+  background-color: #EF4444;
+  color: white;
+}
+
+.suggestion-message {
+  margin: 0;
+  line-height: 1.5;
+  color: #333;
+}
+
+@media screen and (max-width: 1080px) {
+  .userHome .analysis-pnl .analysis-top {
+    flex-direction: column !important;
+    gap: 20px;
+  }
+  
+  .userHome .analysis-pnl .analysis-top .analysis-left,
+  .userHome .analysis-pnl .analysis-top .analysis-right {
+    width: 100% !important;
+    max-width: 100%;
+  }
+  
+  .userHome .analysis-pnl .analysis-top .analysis-left .chart-area {
+    max-height: 300px;
+  }
+  
+  .userHome .analysis-pnl .analysis-bottom {
+    margin-top: 20px;
+  }
+}
+
+/* Improved suggestion box styles */
+.pond-suggestions {
+  margin-bottom: 24px;
+}
+
+.pond-suggestions h3 {
+  margin-bottom: 12px;
+  font-weight: 600;
+  font-size: 18px;
+}
+
+.suggestion-box {
+  background: #f8fafc;
+  border-radius: 10px;
+  padding: 16px;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+  border-left: 5px solid #ccc;
+  display: flex;
+  flex-direction: column;
+}
+
+.suggestion-box.healthy {
+  background-color: #ecfdf5;
+  border-left: 5px solid #10B981;
+}
+
+.suggestion-box.attention {
+  background-color: #eff6ff;
+  border-left: 5px solid #3B82F6;
+}
+
+.suggestion-box.warning {
+  background-color: #fff7ed;
+  border-left: 5px solid #F97316;
+}
+
+.suggestion-box.critical {
+  background-color: #fef2f2;
+  border-left: 5px solid #EF4444;
+}
+
+.suggestion-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 14px;
+  gap: 12px;
+}
+
+.suggestion-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  flex-shrink: 0;
+  font-size: 16px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.suggestion-box.healthy .suggestion-icon {
+  background-color: #10B981;
+  color: white;
+}
+
+.suggestion-box.attention .suggestion-icon {
+  background-color: #3B82F6;
+  color: white;
+}
+
+.suggestion-box.warning .suggestion-icon {
+  background-color: #F97316;
+  color: white;
+}
+
+.suggestion-box.critical .suggestion-icon {
+  background-color: #EF4444;
+  color: white;
+}
+
+.suggestion-status {
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.suggestion-box.healthy .suggestion-status {
+  color: #059669;
+}
+
+.suggestion-box.attention .suggestion-status {
+  color: #2563EB;
+}
+
+.suggestion-box.warning .suggestion-status {
+  color: #EA580C;
+}
+
+.suggestion-box.critical .suggestion-status {
+  color: #DC2626;
+}
+
+.suggestions-list {
+  display: flex;
+  flex-direction: column;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.suggestion-item {
+  position: relative;
+  padding: 8px 0 8px 24px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  line-height: 1.5;
+}
+
+.suggestion-item:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.suggestion-item::before {
+  content: "•";
+  position: absolute;
+  left: 8px;
+  color: #666;
+}
+
+.suggestion-message {
+  margin: 0;
+  line-height: 1.6;
+  color: #374151;
+}
+
+/* Make the suggestions more compact at smaller screen sizes */
+@media screen and (max-width: 768px) {
+  .suggestion-box {
+    padding: 12px;
+  }
+  
+  .suggestion-item {
+    padding: 6px 0 6px 20px;
+    font-size: 14px;
+  }
 }
