@@ -574,9 +574,15 @@ const UserHome = () => {
         //timePeriod = daily, weekly, monthly
 
         if(timePeriod === 'daily') {
-            const currDate = new Date(Date.now()).toISOString().split('T')[0] // YYYY-MM-DD
+
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            const currDate = `${year}-${month}-${day}`;
+
             const devRecordRef = ref(database, `/devices/${selectedDevice}/records/${currDate}`)
-            
+            console.log(currDate);
             try{
                 const snapshot = await get(devRecordRef)
 
